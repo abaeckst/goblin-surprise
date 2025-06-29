@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Cards>
+    <Card>
+      <Quantity>4</Quantity>
+      <Name>Lightning Bolt</Name>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <Name>Monastery Swiftspear</Name>
+    </Card>
+    <Card>
+      <Quantity>3</Quantity>
+      <Name>Goblin Guide</Name>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <Name>Boros Charm</Name>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <Name>Lava Spike</Name>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <Name>Rift Bolt</Name>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <Name>Searing Blaze</Name>
+    </Card>
+    <Card>
+      <Quantity>20</Quantity>
+      <Name>Mountain</Name>
+    </Card>
+  </Cards>
+</Deck>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Cards>
+    <Card>
+      <Quantity>1</Quantity>
+      <Name>Black Lotus</Name>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <Name>Mox Pearl</Name>
+    </Card>
+  </Cards>
+</Deck>

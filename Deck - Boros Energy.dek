@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NetDeckID>0</NetDeckID>
+  <PreconstructedDeckID>0</PreconstructedDeckID>
+  <Cards CatID="126493" Quantity="4" Sideboard="false" Name="Ajani, Nacatl Pariah" Annotation="0"/>
+  <Cards CatID="126449" Quantity="1" Sideboard="false" Name="Arena of Glory" Annotation="0"/>
+  <Cards CatID="90869" Quantity="1" Sideboard="false" Name="Arid Mesa" Annotation="0"/>
+  <Cards CatID="79624" Quantity="1" Sideboard="false" Name="Plains" Annotation="0"/>
+  <Cards CatID="121434" Quantity="2" Sideboard="false" Name="Elegant Parlor" Annotation="0"/>
+  <Cards CatID="79624" Quantity="1" Sideboard="false" Name="Plains" Annotation="0"/>
+  <Cards CatID="90981" Quantity="3" Sideboard="false" Name="Goblin Bombardment" Annotation="0"/>
+  <Cards CatID="126261" Quantity="4" Sideboard="false" Name="Galvanic Discharge" Annotation="0"/>
+  <Cards CatID="54194" Quantity="4" Sideboard="false" Name="Flooded Strand" Annotation="0"/>
+  <Cards CatID="126075" Quantity="4" Sideboard="false" Name="Guide of Souls" Annotation="0"/>
+  <Cards CatID="139647" Quantity="1" Sideboard="false" Name="Voice of Victory" Annotation="0"/>
+  <Cards CatID="126093" Quantity="4" Sideboard="false" Name="Ocelot Pride" Annotation="0"/>
+  <Cards CatID="126413" Quantity="4" Sideboard="false" Name="Phlage, Titan of Fire's Fury" Annotation="0"/>
+  <Cards CatID="19587" Quantity="2" Sideboard="false" Name="Blood Moon" Annotation="0"/>
+  <Cards CatID="139949" Quantity="4" Sideboard="false" Name="Ragavan, Nimble Pilferer" Annotation="0"/>
+  <Cards CatID="90869" Quantity="3" Sideboard="false" Name="Arid Mesa" Annotation="0"/>
+  <Cards CatID="102269" Quantity="4" Sideboard="false" Name="Seasoned Pyromancer" Annotation="0"/>
+  <Cards CatID="126107" Quantity="2" Sideboard="false" Name="Thraben Charm" Annotation="0"/>
+  <Cards CatID="139647" Quantity="1" Sideboard="false" Name="Voice of Victory" Annotation="0"/>
+  <Cards CatID="126449" Quantity="2" Sideboard="false" Name="Arena of Glory" Annotation="0"/>
+  <Cards CatID="47815" Quantity="3" Sideboard="false" Name="Sacred Foundry" Annotation="0"/>
+  <Cards CatID="54202" Quantity="3" Sideboard="false" Name="Windswept Heath" Annotation="0"/>
+  <Cards CatID="79624" Quantity="1" Sideboard="false" Name="Plains" Annotation="0"/>
+  <Cards CatID="79630" Quantity="1" Sideboard="false" Name="Mountain" Annotation="0"/>
+  <Cards CatID="126105" Quantity="1" Sideboard="false" Name="Static Prison" Annotation="0"/>
+  <Cards CatID="129907" Quantity="1" Sideboard="true" Name="Ghost Vacuum" Annotation="0"/>
+  <Cards CatID="35072" Quantity="2" Sideboard="true" Name="Orim's Chant" Annotation="0"/>
+  <Cards CatID="87801" Quantity="2" Sideboard="true" Name="Showdown of the Skalds" Annotation="0"/>
+  <Cards CatID="19723" Quantity="4" Sideboard="true" Name="Molten Rain" Annotation="0"/>
+  <Cards CatID="78108" Quantity="2" Sideboard="true" Name="Deafening Silence" Annotation="0"/>
+  <Cards CatID="48524" Quantity="1" Sideboard="true" Name="Wear/Tear" Annotation="0"/>
+  <Cards CatID="31839" Quantity="2" Sideboard="true" Name="Celestial Purge" Annotation="0"/>
+  <Cards CatID="138953" Quantity="1" Sideboard="true" Name="Clarion Conqueror" Annotation="0"/>
+</Deck>

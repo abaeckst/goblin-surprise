@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Cards>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Lightning Bolt</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Counterspell</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Force of Will</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Brainstorm</n>
+    </Card>
+    <Card>
+      <Quantity>3</Quantity>
+      <n>Snapcaster Mage</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Jace, the Mind Sculptor</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Scalding Tarn</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Volcanic Island</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Tundra</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Island</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Mountain</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Plains</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Karakas</n>
+    </Card>
+    <Card>
+      <Quantity>3</Quantity>
+      <n>Swords to Plowshares</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Pyroblast</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Red Elemental Blast</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Monastery Mentor</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Ponder</n>
+    </Card>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Preordain</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Treasure Cruise</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Dig Through Time</n>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <n>Flusterstorm</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Spell Pierce</n>
+    </Card>
+  </Cards>
+</Deck>
