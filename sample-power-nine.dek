@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck>
+  <Cards>
+    <Card>
+      <Quantity>4</Quantity>
+      <n>Black Lotus</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Ancestral Recall</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Time Walk</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Timetwister</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Mox Sapphire</n>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <n>Mox Ruby</n>
+    </Card>
+  </Cards>
+</Deck>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Cards>
+    <Card>
+      <Quantity>4</Quantity>
+      <Name>Jace, Vryn's Prodigy // Jace, Telepath Unbound</Name>
+    </Card>
+    <Card>
+      <Quantity>3</Quantity>
+      <Name>Emrakul, the Aeons Torn</Name>
+    </Card>
+    <Card>
+      <Quantity>2</Quantity>
+      <Name>Lightning Bolt</Name>
+    </Card>
+    <Card>
+      <Quantity>1</Quantity>
+      <Name>Teferi's Protection</Name>
+    </Card>
+  </Cards>
+</Deck>
