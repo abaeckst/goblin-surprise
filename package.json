@@ -2,6 +2,7 @@
   "name": "temp_react_app",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://abaeckst.github.io/goblin-surprise",
   "dependencies": {
     "@supabase/supabase-js": "^2.50.2",
     "@testing-library/dom": "^10.4.0",
