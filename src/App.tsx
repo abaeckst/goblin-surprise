@@ -243,47 +243,6 @@ function App() {
           </section>
         )}
 
-        {/* Debug Section (only in development) */}
-        {process.env.NODE_ENV === 'development' && isConnected && (
-          <section className="mt-12 p-6 bg-gray-50 rounded-lg border">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">
-              🛠️ Development Tools
-            </h3>
-            <div className="space-y-2">
-              <button
-                onClick={async () => {
-                  try {
-                    await DatabaseService.clearAllData();
-                    alert('All test data cleared!');
-                    setUploadResults([]);
-                  } catch (error) {
-                    alert('Failed to clear data: ' + error);
-                  }
-                }}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm"
-              >
-                Clear All Data
-              </button>
-              <button
-                onClick={() => {
-                  const sampleContent = 'Test content for .dek file parsing';
-                  const blob = new Blob([sampleContent], { type: 'text/xml' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'sample-deck.dek';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                }}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm ml-2"
-              >
-                Download Sample .dek
-              </button>
-            </div>
-          </section>
-        )}
       </main>
     </div>
   );

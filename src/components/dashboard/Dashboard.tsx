@@ -32,11 +32,6 @@ export const Dashboard: React.FC = () => {
     return `$${price.toFixed(2)}`;
   };
 
-  const handleRefreshPrices = async () => {
-    await PriceUpdateService.updateStaleCards();
-    // Reload dashboard data to show updated prices
-    loadDashboardData();
-  };
 
   const handleGetPrices = async () => {
     try {
@@ -229,15 +224,6 @@ export const Dashboard: React.FC = () => {
               Get Prices
             </button>
           )}
-          <button
-            onClick={handleRefreshPrices}
-            disabled={loading || priceUpdateStatus.isUpdating}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Refresh card prices from Scryfall"
-          >
-            <DollarSign className={`h-4 w-4 ${priceUpdateStatus.isUpdating ? 'animate-pulse' : ''}`} />
-            {priceUpdateStatus.isUpdating ? 'Updating...' : 'Refresh Prices'}
-          </button>
           <button
             onClick={handleRefresh}
             disabled={loading}
