@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, Hash, Database } from 'lucide-react';
+import { Users, Clock, Hash, Database, DollarSign } from 'lucide-react';
 import { DatabaseService, subscribeToChanges, supabase } from '../../services/supabase';
 
 interface RecentContribution {
@@ -8,6 +8,7 @@ interface RecentContribution {
   deck_filename: string;
   created_at: string;
   card_count: number;
+  total_value: number;
 }
 
 interface RecentContributionsProps {
@@ -20,6 +21,10 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'error'>('connecting');
 
+  const formatPrice = (price: number): string => {
+    return `$${price.toFixed(2)}`;
+  };
+
   // Load initial data
   useEffect(() => {
     const loadContributions = async () => {
@@ -31,7 +36,6 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
         const uploads = await DatabaseService.getDeckUploads();
         
         // Process and aggregate the contributions
-        const processedContributions: RecentContribution[] = [];
         const contributionMap = new Map<string, RecentContribution>();
         
         uploads.forEach(upload => {
@@ -43,25 +47,37 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
               contributor_name: upload.contributor_name,
               deck_filename: upload.deck_filename,
               created_at: upload.created_at,
-              card_count: 0
+              card_count: 0,
+              total_value: 0
             });
           }
         });
         
-        // Count cards for each contribution
+        // Count cards and calculate values for each contribution
         for (const contribution of Array.from(contributionMap.values())) {
           try {
             const { data: cardData } = await supabase
               .from('gathered_cards')
-              .select('quantity')
+              .select(`
+                quantity,
+                card_name,
+                card_metadata(price_tix)
+              `)
               .eq('contributor_name', contribution.contributor_name)
               .eq('deck_filename', contribution.deck_filename);
             
             const totalCards = cardData?.reduce((sum, card) => sum + card.quantity, 0) || 0;
+            const totalValue = cardData?.reduce((sum, card) => {
+              const price = (card as any).card_metadata?.price_tix || 0;
+              return sum + (price * card.quantity);
+            }, 0) || 0;
+            
             contribution.card_count = totalCards;
+            contribution.total_value = totalValue;
           } catch (err) {
             console.warn('Failed to count cards for contribution:', contribution.id);
             contribution.card_count = 0;
+            contribution.total_value = 0;
           }
         }
         
@@ -112,25 +128,37 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
                   contributor_name: upload.contributor_name,
                   deck_filename: upload.deck_filename,
                   created_at: upload.created_at,
-                  card_count: 0
+                  card_count: 0,
+                  total_value: 0
                 });
               }
             });
             
-            // Count cards for each contribution
+            // Count cards and calculate values for each contribution
             for (const contribution of Array.from(contributionMap.values())) {
               try {
                 const { data: cardData } = await supabase
                   .from('gathered_cards')
-                  .select('quantity')
+                  .select(`
+                    quantity,
+                    card_name,
+                    card_metadata(price_tix)
+                  `)
                   .eq('contributor_name', contribution.contributor_name)
                   .eq('deck_filename', contribution.deck_filename);
                 
                 const totalCards = cardData?.reduce((sum, card) => sum + card.quantity, 0) || 0;
+                const totalValue = cardData?.reduce((sum, card) => {
+                  const price = (card as any).card_metadata?.price_tix || 0;
+                  return sum + (price * card.quantity);
+                }, 0) || 0;
+                
                 contribution.card_count = totalCards;
+                contribution.total_value = totalValue;
               } catch (err) {
                 console.warn('Failed to count cards for contribution:', contribution.id);
                 contribution.card_count = 0;
+                contribution.total_value = 0;
               }
             }
             
@@ -277,6 +305,11 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
                   <div className="flex items-center gap-1 text-gray-600">
                     <Hash className="h-3 w-3" />
                     <span className="text-sm">{contribution.card_count}</span>
+                  </div>
+                  <span className="text-gray-400">•</span>
+                  <div className="flex items-center gap-1 text-green-600">
+                    <DollarSign className="h-3 w-3" />
+                    <span className="text-sm font-medium">{formatPrice(contribution.total_value)}</span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 truncate">

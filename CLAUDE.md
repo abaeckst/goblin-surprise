@@ -39,14 +39,16 @@ MTGO .dek Upload → XML Parse → Database Insert → Real-time Update → Dash
 - `requirement_decks` - Target deck configurations
 - `requirement_cards` - Cards needed per deck
 - `gathered_cards` - Contributed cards with contributor tracking
-- `card_metadata` - Scryfall API data (mana cost, type, rarity, colors)
+- `card_metadata` - Scryfall API data (mana cost, type, rarity, colors, **MTGO prices**)
 - `change_log` - Audit trail for all modifications
 
 ### Key Services
 - `src/services/supabase.ts` - Database operations and real-time subscriptions
 - `src/services/dekParser.ts` - MTGO .dek file XML parsing (enhanced for multiple formats)
 - `src/services/requirementsService.ts` - MAX quantity calculation and card status logic
-- `src/services/scryfallApi.ts` - Card metadata fetching
+- `src/services/scryfallApi.ts` - Card metadata and price fetching from Scryfall API with robust cross-printing search
+- `src/services/scryfallPriceService.ts` - MTGO price data management and caching
+- `src/services/priceUpdateService.ts` - Background price updates and batch processing
 
 ### Component Structure
 ```
@@ -63,6 +65,11 @@ src/components/
 ├── cards/           # Card display tables and management
 │   ├── OutstandingCardsTable.tsx # Cards still needed (RED)
 │   └── GatheredCardsTable.tsx    # Contributed cards (all statuses)
+├── debug/           # Advanced debugging and fixing tools
+│   ├── MetadataFixer.tsx         # Fixes cards missing metadata entirely
+│   ├── PriceFixer.tsx            # Robust price discovery across all printings
+│   ├── PricingDebug.tsx          # Basic pricing debug information
+│   └── ComprehensivePricingDebug.tsx # Complete card status overview
 └── common/          # Shared UI components
     └── UploadModeToggle.tsx      # Switch between upload modes
 ```
@@ -125,10 +132,34 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 **Session 2 (COMPLETE):** ✅ Fixed styling issues, enhanced parser for multiple formats  
 **Session 3 (COMPLETE):** ✅ Requirements upload system with MAX quantity calculation logic and dashboard
 **Session 4 (COMPLETE):** ✅ Export functionality, production build optimization, and deployment preparation
+**Session 5 (COMPLETE):** ✅ MTGO Card Pricing System Integration with full price display
 
-**Current Status:** ALL 4 SESSIONS COMPLETE - Production-ready MTG Collection Rebuilder with complete feature set. Ready for deployment to GitHub Pages.
+**Current Status:** Full MVP complete with all features working including real-time MTGO pricing from Scryfall API.
 
 ## Recent Enhancements
+
+### MTGO Price Integration (Session 5) - COMPLETE ✅
+- **Comprehensive Pricing System:** Full MTGO price integration using Scryfall API working perfectly
+- **Database Schema Updates:** Added `price_tix` and `last_price_update` columns to `card_metadata` table
+- **Smart Caching:** 24-hour price cache with automatic stale data refresh
+- **UI Price Display:** Price and Total Value columns in all card tables with sorting
+- **Dashboard Metrics:** Collection Value and Outstanding Value summary statistics with real prices
+- **Background Updates:** Automatic price refresh on app load and periodic updates (6 hours)
+- **Manual Controls:** "Get Prices" and "Refresh Prices" buttons working with status feedback
+- **Rate Limiting:** Respects Scryfall's 10 requests/second API limits
+- **Contribution Values:** Recent contributions show individual contribution values
+
+**Session 5 Resolution:** Fixed database constraint issue (missing unique constraint on card_name + set_code) and metadata joining in RequirementsService. Prices now display correctly throughout the application.
+
+### Robust MTGO Price Discovery Enhancement - COMPLETE ✅
+- **Cross-Printing Price Search:** Enhanced system to find MTGO prices across ALL printings of each card
+- **Multi-Tier Fallback Strategy:** 3-level approach (exact set → all printings → no restriction)
+- **Scryfall API Enhancement:** New `findBestMtgoPrintingForCard()` method using `unique=prints` and `order=tix`
+- **Smart Set Code Updates:** Automatically updates metadata to use the set with available MTGO pricing
+- **Advanced Debug Tools:** Comprehensive debugging panels for metadata and pricing issues
+- **Handles Edge Cases:** Properly finds prices for cards from paper-only sets, remaster sets, etc.
+
+**Key Innovation:** Cards like "Dragon's Rage Channeler" from MH2, "Unearth" from various printings, and shock lands from multiple sets now correctly find their MTGO prices regardless of which specific printing appears in deck files.
 
 ### Export & Production Features (Session 4)
 - **Export Missing Cards:** One-click export of outstanding cards with copy to clipboard
@@ -158,6 +189,11 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - ✅ Requirements upload system with database integration
 - ✅ Color-coded status system (RED/BLUE/GREEN) implementation
 - ✅ Real-time subscriptions for collaborative updates
+- ✅ MTGO pricing system with Scryfall API integration
+- ✅ Database constraint and metadata joining issues resolved
+- ✅ Robust cross-printing MTGO price discovery for cards from any set
+- ✅ Missing metadata detection and automatic population
+- ✅ Advanced debugging tools for pricing and metadata issues
 
 ## Development Workflow
 
@@ -174,4 +210,4 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - Client-side file processing only
 - No user authentication (public contribution model)
 - MTGO .dek format dependency
-- 4-session development timeline for complete MVP
+- 5-session development timeline for complete MVP (COMPLETE)

@@ -7,6 +7,7 @@ import { ProgressSummary } from './components/dashboard/ProgressSummary';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { UploadModeToggle, type UploadMode } from './components/common/UploadModeToggle';
 import { DatabaseService } from './services/supabase';
+import PriceUpdateService from './services/priceUpdateService';
 import type { UploadResult } from './types/uploads';
 import './App.css';
 
@@ -17,7 +18,7 @@ function App() {
   const [uploadMode, setUploadMode] = useState<UploadMode>('contribution');
   const [currentView, setCurrentView] = useState<'upload' | 'dashboard'>('upload');
 
-  // Test database connection on load
+  // Test database connection and initialize price updates on load
   useEffect(() => {
     const testConnection = async () => {
       console.log('🔄 React: Starting connection test from useEffect...');
@@ -27,6 +28,12 @@ function App() {
         console.log('🔄 React: About to call setIsConnected with:', connected);
         setIsConnected(connected);
         console.log('🔄 React: setIsConnected called');
+
+        // Initialize price updates if connected
+        if (connected) {
+          console.log('📊 Initializing price update system...');
+          PriceUpdateService.initializeAppPrices();
+        }
       } catch (error) {
         console.error('🔄 React: Connection test failed with exception:', error);
         setIsConnected(false);
@@ -34,6 +41,12 @@ function App() {
     };
 
     testConnection();
+
+    // Set up periodic price updates
+    const cleanup = PriceUpdateService.schedulePeriodicUpdates();
+    
+    // Return cleanup function
+    return cleanup;
   }, []);
 
   // Debug state changes

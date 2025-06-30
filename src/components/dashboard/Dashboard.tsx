@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, BarChart3, Download, Check } from 'lucide-react';
+import { RefreshCw, BarChart3, Download, Check, DollarSign } from 'lucide-react';
 import { RequirementsService } from '../../services/requirementsService';
 import { subscribeToChanges } from '../../services/supabase';
+import PriceUpdateService from '../../services/priceUpdateService';
 import { ProgressBar } from './ProgressBar';
 import { OutstandingCardsTable } from '../cards/OutstandingCardsTable';
 import { GatheredCardsTable } from '../cards/GatheredCardsTable';
@@ -20,9 +21,55 @@ export const Dashboard: React.FC = () => {
     exactCards: 0,
     surplusCards: 0,
     completionPercentage: 0,
-    totalUniqueCards: 0
+    totalUniqueCards: 0,
+    totalCollectionValue: 0,
+    totalOutstandingValue: 0
   });
   const [exportCopied, setExportCopied] = useState(false);
+  const [priceUpdateStatus, setPriceUpdateStatus] = useState(PriceUpdateService.getStatus());
+
+  const formatPrice = (price: number): string => {
+    return `$${price.toFixed(2)}`;
+  };
+
+  const handleRefreshPrices = async () => {
+    await PriceUpdateService.updateStaleCards();
+    // Reload dashboard data to show updated prices
+    loadDashboardData();
+  };
+
+  const handleGetPrices = async () => {
+    try {
+      console.log('🔄 Fetching latest prices...');
+      
+      // Get all unique card names from the current data
+      const cardNamesSet = new Set<string>();
+      outstandingCards.forEach(card => cardNamesSet.add(card.card_name));
+      gatheredCards.forEach(card => cardNamesSet.add(card.card_name));
+      
+      if (cardNamesSet.size === 0) {
+        alert('No cards found to update prices for');
+        return;
+      }
+
+      // Convert Set to Array without spread operator
+      const cardNamesArray: string[] = [];
+      cardNamesSet.forEach(name => cardNamesArray.push(name));
+      
+      console.log(`📊 Found ${cardNamesArray.length} unique cards, fetching prices...`);
+      
+      // Use the PriceUpdateService to refresh metadata for these cards
+      await PriceUpdateService.refreshCardsMetadata(cardNamesArray);
+      
+      // Reload dashboard data to show updated prices
+      loadDashboardData();
+      
+      alert(`✅ Prices updated! Refreshed ${cardNamesArray.length} cards.`);
+    } catch (error) {
+      console.error('❌ Price update failed:', error);
+      alert('❌ Price update failed. Check console for details.');
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -35,9 +82,24 @@ export const Dashboard: React.FC = () => {
         RequirementsService.getProgressStats()
       ]);
 
+      // Calculate price statistics
+      const totalCollectionValue = gathered.reduce((total, card) => {
+        const price = card.metadata?.price_tix || 0;
+        return total + (price * card.gathered_quantity);
+      }, 0);
+
+      const totalOutstandingValue = outstanding.reduce((total, card) => {
+        const price = card.metadata?.price_tix || 0;
+        return total + (price * card.outstanding_quantity);
+      }, 0);
+
       setOutstandingCards(outstanding);
       setGatheredCards(gathered);
-      setProgressStats(stats);
+      setProgressStats({
+        ...stats,
+        totalCollectionValue,
+        totalOutstandingValue
+      });
 
     } catch (err) {
       console.error('Error loading dashboard data:', err);
@@ -96,11 +158,17 @@ export const Dashboard: React.FC = () => {
       loadDashboardData();
     });
 
+    // Subscribe to price update status changes
+    const priceUpdateUnsubscribe = PriceUpdateService.onStatusChange((status) => {
+      setPriceUpdateStatus(status);
+    });
+
     // Cleanup subscriptions on unmount
     return () => {
       gatheredSubscription.unsubscribe();
       requirementCardsSubscription.unsubscribe();
       requirementDecksSubscription.unsubscribe();
+      priceUpdateUnsubscribe();
     };
   }, []);
 
@@ -149,6 +217,27 @@ export const Dashboard: React.FC = () => {
               </>
             )}
           </button>
+          {/* Show get prices button if there are cards but no collection value */}
+          {progressStats.totalUniqueCards > 0 && progressStats.totalCollectionValue === 0 && (
+            <button
+              onClick={handleGetPrices}
+              disabled={loading || priceUpdateStatus.isUpdating}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Fetch prices for all existing cards"
+            >
+              <DollarSign className={`h-4 w-4 ${priceUpdateStatus.isUpdating ? 'animate-pulse' : ''}`} />
+              Get Prices
+            </button>
+          )}
+          <button
+            onClick={handleRefreshPrices}
+            disabled={loading || priceUpdateStatus.isUpdating}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Refresh card prices from Scryfall"
+          >
+            <DollarSign className={`h-4 w-4 ${priceUpdateStatus.isUpdating ? 'animate-pulse' : ''}`} />
+            {priceUpdateStatus.isUpdating ? 'Updating...' : 'Refresh Prices'}
+          </button>
           <button
             onClick={handleRefresh}
             disabled={loading}
@@ -169,7 +258,7 @@ export const Dashboard: React.FC = () => {
       />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-2xl font-bold text-red-600">{progressStats.neededCards}</div>
           <div className="text-sm text-gray-500">Cards Needed</div>
@@ -186,6 +275,14 @@ export const Dashboard: React.FC = () => {
           <div className="text-2xl font-bold text-gray-800">{progressStats.totalUniqueCards}</div>
           <div className="text-sm text-gray-500">Unique Cards</div>
         </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-lg font-bold text-green-700">{formatPrice(progressStats.totalCollectionValue)}</div>
+          <div className="text-sm text-gray-500">Collection Value</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-lg font-bold text-red-700">{formatPrice(progressStats.totalOutstandingValue)}</div>
+          <div className="text-sm text-gray-500">Outstanding Value</div>
+        </div>
       </div>
 
       {/* Cards Tables */}
@@ -201,6 +298,7 @@ export const Dashboard: React.FC = () => {
           className="lg:col-span-1"
         />
       </div>
+
 
       {/* No Data State */}
       {!loading && progressStats.totalUniqueCards === 0 && (

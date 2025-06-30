@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, AlertCircle, CheckCircle, FileText, User } from 'lucide-react';
+import { Upload, AlertCircle, FileText, User } from 'lucide-react';
 import { DekParser } from '../../services/dekParser';
 import { DatabaseService } from '../../services/supabase';
 import type { UploadResult, UploadState } from '../../types/uploads';
-import type { ParsedDeck } from '../../types/cards';
 
 interface FileUploadProps {
   onUploadComplete: (result: UploadResult) => void;
@@ -116,7 +115,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         error: error instanceof Error ? error.message : 'Upload failed'
       });
     }
-  }, [contributorName, onUploadComplete, onUploadStart]);
+  }, [contributorName, onUploadComplete, onUploadStart, processFile]);
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,

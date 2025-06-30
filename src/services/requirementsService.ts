@@ -1,9 +1,5 @@
 import { DatabaseService, supabase } from './supabase';
 import type { ProcessedCard } from '../types/cards';
-import type { Database } from '../types/database';
-
-type RequirementCard = Database['public']['Tables']['requirement_cards']['Row'];
-type GatheredCard = Database['public']['Tables']['gathered_cards']['Row'];
 
 export class RequirementsService {
   
@@ -40,6 +36,27 @@ export class RequirementsService {
       requirementMap.forEach((_, cardName) => allCardNames.add(cardName));
       gatheredMap.forEach((_, cardName) => allCardNames.add(cardName));
 
+      // Fetch metadata for all cards
+      console.log(`🔍 [DEBUG] Fetching metadata for ${allCardNames.size} unique cards...`);
+      const { data: metadataRows, error: metadataError } = await supabase
+        .from('card_metadata')
+        .select('*')
+        .in('card_name', Array.from(allCardNames));
+      
+      if (metadataError) {
+        console.error('❌ [DEBUG] Error fetching card metadata:', metadataError);
+      } else {
+        console.log(`📊 [DEBUG] Found metadata for ${metadataRows?.length || 0} cards:`, 
+          metadataRows?.map(m => ({ name: m.card_name, price: m.price_tix })).slice(0, 5)
+        );
+      }
+      
+      // Create metadata map for quick lookup
+      const metadataMap = new Map();
+      metadataRows?.forEach(metadata => {
+        metadataMap.set(metadata.card_name, metadata);
+      });
+
       // Calculate status for each card
       const processedCards: ProcessedCard[] = Array.from(allCardNames).map(cardName => {
         const requiredQuantity = requirementMap.get(cardName) || 0;
@@ -56,12 +73,15 @@ export class RequirementsService {
           status = 'surplus';
         }
 
+        const metadata = metadataMap.get(cardName);
+        
         return {
           card_name: cardName,
           required_quantity: requiredQuantity,
           gathered_quantity: gatheredQuantity,
           outstanding_quantity: outstandingQuantity,
           status,
+          metadata: metadata || undefined,
           contributors: gatheredData.contributors
         };
       });

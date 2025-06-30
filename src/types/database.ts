@@ -31,6 +31,8 @@ export interface CardMetadata {
   set_code: string;
   scryfall_id: string;
   image_uri: string;
+  price_tix?: number | null;
+  last_price_update?: string | null;
   created_at: string;
 }
 
