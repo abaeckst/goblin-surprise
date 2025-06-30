@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Target, Users, Hash, TrendingUp, Database } from 'lucide-react';
-import { supabase } from '../../services/supabase';
+import { BarChart3, Target, Users, Hash, TrendingUp, Database, DollarSign } from 'lucide-react';
+import { RequirementsService } from '../../services/requirementsService';
+import { subscribeToChanges } from '../../services/supabase';
 
 interface ProgressStats {
   totalCardsGathered: number;
@@ -9,9 +10,12 @@ interface ProgressStats {
   uniqueCardsRequired: number;
   totalContributors: number;
   completionPercentage: number;
+  totalCollectionValue: number;
+  totalOutstandingValue: number;
   topContributors: Array<{
     name: string;
     cardCount: number;
+    totalValue: number;
   }>;
 }
 
@@ -24,68 +28,71 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const formatPrice = (price: number): string => {
+    return `$${price.toFixed(2)}`;
+  };
+
   const loadProgressStats = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get gathered cards stats
-      const { data: gatheredCards, error: gatheredError } = await supabase
-        .from('gathered_cards')
-        .select('card_name, quantity, contributor_name');
+      // Use RequirementsService to get proper progress stats with pricing
+      const [outstandingCards, gatheredCards, progressStats] = await Promise.all([
+        RequirementsService.getOutstandingCards(),
+        RequirementsService.getGatheredCards(),
+        RequirementsService.getProgressStats()
+      ]);
 
-      if (gatheredError) throw gatheredError;
+      // Calculate price statistics
+      const totalCollectionValue = gatheredCards.reduce((total, card) => {
+        const price = card.metadata?.price_tix || 0;
+        return total + (price * card.gathered_quantity);
+      }, 0);
 
-      // For now, we'll work without requirements since the table structure isn't ready
-      // This will be implemented in Session 2
-      const requiredCards: any[] = [];
+      const totalOutstandingValue = outstandingCards.reduce((total, card) => {
+        const price = card.metadata?.price_tix || 0;
+        return total + (price * card.outstanding_quantity);
+      }, 0);
 
-      // Calculate stats
-      const gatheredStats = new Map<string, number>();
-      const contributorStats = new Map<string, number>();
-      let totalCardsGathered = 0;
-
-      gatheredCards?.forEach(card => {
-        // Sum gathered quantities by card name
-        const currentQuantity = gatheredStats.get(card.card_name) || 0;
-        gatheredStats.set(card.card_name, currentQuantity + card.quantity);
-        totalCardsGathered += card.quantity;
-
-        // Sum contributor stats
-        const currentContributions = contributorStats.get(card.contributor_name) || 0;
-        contributorStats.set(card.contributor_name, currentContributions + card.quantity);
+      // Calculate contributor stats with values
+      const contributorStats = new Map<string, { cardCount: number; totalValue: number }>();
+      
+      gatheredCards.forEach(card => {
+        if (card.contributors) {
+          card.contributors.forEach(contributor => {
+            const existing = contributorStats.get(contributor.name) || { cardCount: 0, totalValue: 0 };
+            const price = card.metadata?.price_tix || 0;
+            existing.cardCount += contributor.quantity;
+            existing.totalValue += price * contributor.quantity;
+            contributorStats.set(contributor.name, existing);
+          });
+        }
       });
-
-      const requiredStats = new Map<string, number>();
-      let totalCardsRequired = 0;
-
-      requiredCards?.forEach(card => {
-        requiredStats.set(card.card_name, card.required_quantity);
-        totalCardsRequired += card.required_quantity;
-      });
-
-      // Calculate completion percentage
-      const completionPercentage = totalCardsRequired > 0 
-        ? Math.round((totalCardsGathered / totalCardsRequired) * 100)
-        : 0;
 
       // Get top contributors
       const topContributors = Array.from(contributorStats.entries())
-        .map(([name, cardCount]) => ({ name, cardCount }))
+        .map(([name, stats]) => ({ 
+          name, 
+          cardCount: stats.cardCount,
+          totalValue: stats.totalValue 
+        }))
         .sort((a, b) => b.cardCount - a.cardCount)
         .slice(0, 5);
 
-      const progressStats: ProgressStats = {
-        totalCardsGathered,
-        totalCardsRequired,
-        uniqueCardsGathered: gatheredStats.size,
-        uniqueCardsRequired: requiredStats.size,
+      const combinedStats: ProgressStats = {
+        totalCardsGathered: progressStats.totalGatheredCards,
+        totalCardsRequired: progressStats.totalRequiredCards,
+        uniqueCardsGathered: progressStats.totalUniqueCards,
+        uniqueCardsRequired: progressStats.totalUniqueCards,
         totalContributors: contributorStats.size,
-        completionPercentage,
+        completionPercentage: progressStats.completionPercentage,
+        totalCollectionValue,
+        totalOutstandingValue,
         topContributors
       };
 
-      setStats(progressStats);
+      setStats(combinedStats);
 
     } catch (err) {
       console.error('Failed to load progress stats:', err);
@@ -98,25 +105,20 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
   useEffect(() => {
     loadProgressStats();
 
-    // Set up real-time updates (only for gathered_cards since requirement_cards may not exist)
-    const channel = supabase
-      .channel('progress-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'gathered_cards',
-        },
-        () => {
-          console.log('Progress stats update triggered by real-time change');
-          setTimeout(loadProgressStats, 500); // Small delay for data consistency
-        }
-      )
-      .subscribe();
+    // Set up real-time updates for both gathered_cards and requirement_cards
+    const gatheredChannel = subscribeToChanges('gathered_cards', () => {
+      console.log('Progress stats update triggered by gathered_cards change');
+      setTimeout(loadProgressStats, 500); // Small delay for data consistency
+    });
+
+    const requirementChannel = subscribeToChanges('requirement_cards', () => {
+      console.log('Progress stats update triggered by requirement_cards change');
+      setTimeout(loadProgressStats, 500);
+    });
 
     return () => {
-      channel.unsubscribe();
+      gatheredChannel.unsubscribe();
+      requirementChannel.unsubscribe();
     };
   }, []);
 
@@ -230,6 +232,28 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
           </p>
           <p className="text-xs text-green-600">helping rebuild</p>
         </div>
+
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign className="h-4 w-4 text-emerald-600" />
+            <span className="text-sm font-medium text-emerald-800">Collection Value</span>
+          </div>
+          <p className="text-xl font-bold text-emerald-700">
+            {formatPrice(stats.totalCollectionValue)}
+          </p>
+          <p className="text-xs text-emerald-600">contributed so far</p>
+        </div>
+
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="h-4 w-4 text-orange-600" />
+            <span className="text-sm font-medium text-orange-800">Still Needed</span>
+          </div>
+          <p className="text-xl font-bold text-orange-700">
+            {formatPrice(stats.totalOutstandingValue)}
+          </p>
+          <p className="text-xs text-orange-600">cards to find</p>
+        </div>
       </div>
 
       {/* Top Contributors */}
@@ -255,9 +279,14 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
                     {contributor.name}
                   </span>
                 </div>
-                <span className="text-sm text-gray-600 font-mono">
-                  {contributor.cardCount}
-                </span>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="text-gray-600 font-mono">
+                    {contributor.cardCount} cards
+                  </span>
+                  <span className="text-green-600 font-semibold">
+                    {formatPrice(contributor.totalValue)}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
