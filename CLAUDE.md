@@ -61,7 +61,7 @@ src/components/
 │   ├── Dashboard.tsx          # Main progress dashboard
 │   ├── ProgressBar.tsx        # Completion percentage visual
 │   ├── ProgressSummary.tsx    # Legacy summary component
-│   └── RecentContributions.tsx # Recent upload activity
+│   └── RecentContributions.tsx # Optimized recent contributions with batch data fetching
 ├── cards/           # Card display tables and management
 │   ├── OutstandingCardsTable.tsx # Cards still needed (RED)
 │   └── GatheredCardsTable.tsx    # Contributed cards (all statuses)
@@ -139,6 +139,14 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 
 ## Recent Enhancements
 
+### Recent Contributions Panel Optimization (Latest) - COMPLETE ✅
+- **Data Fetching Overhaul:** Replaced inefficient multiple queries with single batch query for all gathered cards
+- **Performance Improvement:** Eliminated N+1 query problem by fetching all data at once and processing client-side
+- **Historical Data Support:** Now accurately displays card counts and dollar values for ALL past contributions
+- **Metadata Integration:** Proper price data fetching with graceful fallback for cards without MTGO pricing
+- **Real-time Updates:** Enhanced live refresh system using efficient batch processing approach
+- **Client-side Processing:** Smart grouping by contributor + deck filename with accurate totals calculation
+
 ### Production Deployment Preparation (Session 6) - COMPLETE ✅
 - **Contributions Panel Fix:** Fixed progress tracking to use proper RequirementsService instead of hardcoded empty data
 - **Accurate Progress Tracking:** Progress bars and statistics now reflect real requirements vs gathered cards
@@ -208,6 +216,7 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - ✅ Production-ready interface without development tools (Session 6)
 - ✅ Accurate contributions panel with real progress tracking (Session 6)
 - ✅ Clean deployment-ready build optimized for GitHub Pages (Session 6)
+- ✅ Recent Contributions panel performance optimization with historical data support (Latest)
 
 ## Development Workflow
 

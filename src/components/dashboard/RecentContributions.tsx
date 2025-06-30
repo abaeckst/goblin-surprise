@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Clock, Hash, Database, DollarSign } from 'lucide-react';
-import { DatabaseService, subscribeToChanges, supabase } from '../../services/supabase';
+import { subscribeToChanges, supabase } from '../../services/supabase';
 
 interface RecentContribution {
   id: string;
@@ -32,61 +32,69 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
         setLoading(true);
         setError(null);
         
-        // Get recent unique contributions
-        const uploads = await DatabaseService.getDeckUploads();
+        // Get ALL gathered cards with their metadata in one query
+        const { data: allGatheredCards, error: cardsError } = await supabase
+          .from('gathered_cards')
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        // Process and aggregate the contributions
+        if (cardsError) {
+          throw cardsError;
+        }
+        
+        // Get all unique card names to fetch metadata
+        const uniqueCardNames = new Set<string>();
+        allGatheredCards?.forEach(card => uniqueCardNames.add(card.card_name));
+        
+        // Fetch metadata for all cards at once
+        const { data: metadataRows } = await supabase
+          .from('card_metadata')
+          .select('card_name, price_tix')
+          .in('card_name', Array.from(uniqueCardNames));
+        
+        // Create metadata lookup map
+        const metadataMap = new Map<string, number>();
+        metadataRows?.forEach(metadata => {
+          if (metadata.price_tix) {
+            metadataMap.set(metadata.card_name, metadata.price_tix);
+          }
+        });
+        
+        // Process and aggregate contributions client-side
         const contributionMap = new Map<string, RecentContribution>();
         
-        uploads.forEach(upload => {
-          const key = `${upload.contributor_name}_${upload.deck_filename}`;
+        allGatheredCards?.forEach(card => {
+          const key = `${card.contributor_name}_${card.deck_filename}`;
           
           if (!contributionMap.has(key)) {
             contributionMap.set(key, {
               id: key,
-              contributor_name: upload.contributor_name,
-              deck_filename: upload.deck_filename,
-              created_at: upload.created_at,
+              contributor_name: card.contributor_name,
+              deck_filename: card.deck_filename,
+              created_at: card.created_at,
               card_count: 0,
               total_value: 0
             });
           }
+          
+          const contribution = contributionMap.get(key)!;
+          contribution.card_count += card.quantity;
+          
+          // Add value if we have price metadata
+          const price = metadataMap.get(card.card_name) || 0;
+          contribution.total_value += price * card.quantity;
         });
         
-        // Count cards and calculate values for each contribution
-        for (const contribution of Array.from(contributionMap.values())) {
-          try {
-            const { data: cardData } = await supabase
-              .from('gathered_cards')
-              .select(`
-                quantity,
-                card_name,
-                card_metadata(price_tix)
-              `)
-              .eq('contributor_name', contribution.contributor_name)
-              .eq('deck_filename', contribution.deck_filename);
-            
-            const totalCards = cardData?.reduce((sum, card) => sum + card.quantity, 0) || 0;
-            const totalValue = cardData?.reduce((sum, card) => {
-              const price = (card as any).card_metadata?.price_tix || 0;
-              return sum + (price * card.quantity);
-            }, 0) || 0;
-            
-            contribution.card_count = totalCards;
-            contribution.total_value = totalValue;
-          } catch (err) {
-            console.warn('Failed to count cards for contribution:', contribution.id);
-            contribution.card_count = 0;
-            contribution.total_value = 0;
-          }
-        }
-        
+        // Sort by most recent and take top 10
         const sortedContributions = Array.from(contributionMap.values())
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 10); // Show last 10 contributions
+          .slice(0, 10);
         
         setContributions(sortedContributions);
         setConnectionStatus('connected');
+        
+        console.log('✅ Loaded contributions:', sortedContributions.length);
+        console.log('📊 Sample contribution:', sortedContributions[0]);
         
       } catch (err) {
         console.error('Failed to load contributions:', err);
@@ -114,54 +122,58 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
         // Add a slight delay to ensure data consistency
         setTimeout(async () => {
           try {
-            const uploads = await DatabaseService.getDeckUploads();
+            // Use the same efficient approach as initial load
+            const { data: allGatheredCards } = await supabase
+              .from('gathered_cards')
+              .select('*')
+              .order('created_at', { ascending: false });
             
-            // Process and update contributions (simplified version)
+            if (!allGatheredCards) return;
+            
+            // Get all unique card names to fetch metadata
+            const uniqueCardNames = new Set<string>();
+            allGatheredCards.forEach(card => uniqueCardNames.add(card.card_name));
+            
+            // Fetch metadata for all cards at once
+            const { data: metadataRows } = await supabase
+              .from('card_metadata')
+              .select('card_name, price_tix')
+              .in('card_name', Array.from(uniqueCardNames));
+            
+            // Create metadata lookup map
+            const metadataMap = new Map<string, number>();
+            metadataRows?.forEach(metadata => {
+              if (metadata.price_tix) {
+                metadataMap.set(metadata.card_name, metadata.price_tix);
+              }
+            });
+            
+            // Process and aggregate contributions client-side
             const contributionMap = new Map<string, RecentContribution>();
             
-            uploads.forEach(upload => {
-              const key = `${upload.contributor_name}_${upload.deck_filename}`;
+            allGatheredCards.forEach(card => {
+              const key = `${card.contributor_name}_${card.deck_filename}`;
               
               if (!contributionMap.has(key)) {
                 contributionMap.set(key, {
                   id: key,
-                  contributor_name: upload.contributor_name,
-                  deck_filename: upload.deck_filename,
-                  created_at: upload.created_at,
+                  contributor_name: card.contributor_name,
+                  deck_filename: card.deck_filename,
+                  created_at: card.created_at,
                   card_count: 0,
                   total_value: 0
                 });
               }
+              
+              const contribution = contributionMap.get(key)!;
+              contribution.card_count += card.quantity;
+              
+              // Add value if we have price metadata
+              const price = metadataMap.get(card.card_name) || 0;
+              contribution.total_value += price * card.quantity;
             });
             
-            // Count cards and calculate values for each contribution
-            for (const contribution of Array.from(contributionMap.values())) {
-              try {
-                const { data: cardData } = await supabase
-                  .from('gathered_cards')
-                  .select(`
-                    quantity,
-                    card_name,
-                    card_metadata(price_tix)
-                  `)
-                  .eq('contributor_name', contribution.contributor_name)
-                  .eq('deck_filename', contribution.deck_filename);
-                
-                const totalCards = cardData?.reduce((sum, card) => sum + card.quantity, 0) || 0;
-                const totalValue = cardData?.reduce((sum, card) => {
-                  const price = (card as any).card_metadata?.price_tix || 0;
-                  return sum + (price * card.quantity);
-                }, 0) || 0;
-                
-                contribution.card_count = totalCards;
-                contribution.total_value = totalValue;
-              } catch (err) {
-                console.warn('Failed to count cards for contribution:', contribution.id);
-                contribution.card_count = 0;
-                contribution.total_value = 0;
-              }
-            }
-            
+            // Sort by most recent and take top 10
             const updatedContributions = Array.from(contributionMap.values())
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
               .slice(0, 10);
