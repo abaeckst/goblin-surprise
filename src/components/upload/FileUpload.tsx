@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, AlertCircle, FileText, User } from 'lucide-react';
-import { DekParser } from '../../services/dekParser';
+import { Upload, AlertCircle, FileText, User, Clock } from 'lucide-react';
+import { DeckParser } from '../../services/deckParser';
 import { DatabaseService } from '../../services/supabase';
+import { UploadConfirmation } from './UploadConfirmation';
 import type { UploadResult, UploadState } from '../../types/uploads';
 
 interface FileUploadProps {
@@ -23,18 +24,39 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     currentFile: null,
     error: null
   });
+  const [lastUploadTime, setLastUploadTime] = useState<number | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [lastUploadResult, setLastUploadResult] = useState<UploadResult | null>(null);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (lastUploadTime) {
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - lastUploadTime;
+        const remaining = Math.max(0, 60000 - elapsed); // 60 seconds
+        setCooldownRemaining(Math.ceil(remaining / 1000));
+        
+        if (remaining === 0) {
+          clearInterval(interval);
+        }
+      }, 100); // Update every 100ms for smooth countdown
+
+      return () => clearInterval(interval);
+    }
+  }, [lastUploadTime]);
 
   const processFile = async (file: File): Promise<UploadResult> => {
     try {
       // Validate file
-      const validation = DekParser.validateFile(file);
+      const validation = DeckParser.validateFile(file);
       if (!validation.valid) {
         throw new Error(validation.error);
       }
 
-      // Parse the .dek file
+      // Parse the deck file
       setUploadState(prev => ({ ...prev, currentFile: file.name, progress: 25 }));
-      const parsedDeck = await DekParser.parseFile(file);
+      const parsedDeck = await DeckParser.parseFile(file);
       
       console.log('🎯 Parsed deck result:', parsedDeck);
       
@@ -80,6 +102,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       return;
     }
 
+    // Check cooldown
+    if (cooldownRemaining > 0) {
+      setUploadState(prev => ({ 
+        ...prev, 
+        error: `Please wait ${cooldownRemaining} seconds before uploading again to prevent duplicates` 
+      }));
+      return;
+    }
+
     if (acceptedFiles.length === 0) return;
 
     setUploadState({
@@ -92,20 +123,29 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     onUploadStart?.();
 
     try {
+      let lastResult: UploadResult | null = null;
+      
       // Process files one at a time
       for (const file of acceptedFiles) {
         const result = await processFile(file);
         onUploadComplete(result);
+        lastResult = result;
       }
 
-      // Reset form on success
-      setContributorName('');
+      // Don't reset form - show confirmation instead
       setUploadState({
         uploading: false,
         progress: 0,
         currentFile: null,
         error: null
       });
+      
+      // Set last upload time and show confirmation
+      if (lastResult) {
+        setLastUploadTime(Date.now());
+        setLastUploadResult(lastResult);
+        setShowConfirmation(true);
+      }
 
     } catch (error) {
       setUploadState({
@@ -115,16 +155,17 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         error: error instanceof Error ? error.message : 'Upload failed'
       });
     }
-  }, [contributorName, onUploadComplete, onUploadStart, processFile]);
+  }, [contributorName, cooldownRemaining, onUploadComplete, onUploadStart]);
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: {
       'text/xml': ['.dek'],
-      'application/xml': ['.dek']
+      'application/xml': ['.dek'],
+      'text/plain': ['.txt']
     },
     multiple: true,
-    disabled: disabled || uploadState.uploading || !contributorName.trim(),
+    disabled: disabled || uploadState.uploading || !contributorName.trim() || cooldownRemaining > 0,
     maxSize: 5 * 1024 * 1024 // 5MB
   });
 
@@ -132,7 +173,25 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     setUploadState(prev => ({ ...prev, error: null }));
   };
 
-  const isReady = contributorName.trim() && !uploadState.uploading && !disabled;
+  const isReady = contributorName.trim() && !uploadState.uploading && !disabled && cooldownRemaining === 0;
+
+  const handleUploadAnother = () => {
+    setShowConfirmation(false);
+    setContributorName('');
+    setLastUploadResult(null);
+  };
+
+  // Show confirmation screen if upload was successful
+  if (showConfirmation && lastUploadResult) {
+    return (
+      <UploadConfirmation
+        contributorName={lastUploadResult.contributorName}
+        deckName={lastUploadResult.deck.filename}
+        cardCount={lastUploadResult.cardsProcessed}
+        onUploadAnother={handleUploadAnother}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
@@ -140,6 +199,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         <Upload className="h-6 w-6" />
         Upload MTGO Deck Files
         {disabled && <span className="text-red-500 text-sm ml-2">(Database not connected)</span>}
+        {DatabaseService.testMode && <span className="text-yellow-600 text-sm ml-2">(Test Mode)</span>}
       </h2>
 
       {/* Contributor Name Input */}
@@ -159,6 +219,29 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         />
       </div>
 
+      {/* Cooldown Warning */}
+      {cooldownRemaining > 0 && (
+        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <Clock className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+            <div className="flex-grow">
+              <p className="text-yellow-800 font-medium">
+                Please wait {cooldownRemaining} seconds before uploading again
+              </p>
+              <p className="text-yellow-700 text-sm mt-1">
+                This helps prevent accidental duplicate uploads. 
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="text-yellow-800 underline hover:text-yellow-900 ml-1"
+                >
+                  Refresh the page if this is in error
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* File Drop Zone */}
       <div
         {...getRootProps()}
@@ -170,7 +253,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               ? 'border-blue-300 hover:border-blue-400 hover:bg-blue-50 bg-gray-50' 
               : 'border-gray-300 bg-gray-100 cursor-not-allowed'
           }
-          ${uploadState.uploading ? 'pointer-events-none' : ''}
+          ${uploadState.uploading || cooldownRemaining > 0 ? 'pointer-events-none' : ''}
         `}
       >
         <input {...getInputProps()} />
@@ -201,10 +284,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             <div>
               <p className={`text-lg ${isReady ? 'text-gray-600' : 'text-gray-400'}`}>
                 {isDragActive 
-                  ? 'Drop .dek files here...' 
-                  : isReady
-                    ? 'Drag and drop .dek files here, or click to browse'
-                    : 'Enter your name first to enable file upload'
+                  ? 'Drop deck files here...' 
+                  : cooldownRemaining > 0
+                    ? `Upload locked for ${cooldownRemaining} seconds`
+                    : isReady
+                      ? 'Drag and drop deck files here (.dek or .txt), or click to browse'
+                      : 'Enter your name first to enable file upload'
                 }
               </p>
               <p className="text-sm text-gray-500 mt-1">
@@ -247,7 +332,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
       {/* Instructions */}
       <div className="mt-6 text-xs text-gray-500 space-y-1">
-        <p>• Upload MTGO .dek files exported from Magic Online</p>
+        <p>• Upload MTGO deck files (.dek or .txt format)</p>
         <p>• Files will be parsed and cards added to the collection</p>
         <p>• Duplicate uploads are allowed and will add to totals</p>
       </div>

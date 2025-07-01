@@ -1,7 +1,8 @@
 import { XMLParser } from 'fast-xml-parser';
+import { TxtParser } from './txtParser';
 import type { ParsedDeck, ParsedDeckCard } from '../types/cards';
 
-export class DekParser {
+export class DeckParser {
   private static xmlParser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
@@ -9,6 +10,46 @@ export class DekParser {
     parseAttributeValue: true,
     trimValues: true
   });
+
+  /**
+   * Parse deck file based on format detection
+   */
+  static async parseFile(file: File): Promise<ParsedDeck> {
+    const extension = file.name.toLowerCase().split('.').pop();
+    
+    switch (extension) {
+      case 'dek':
+        return this.parseDekFile(file);
+      case 'txt':
+        return TxtParser.parseFile(file);
+      default:
+        throw new Error(`Unsupported file format: .${extension}`);
+    }
+  }
+
+  /**
+   * Validate file before parsing
+   */
+  static validateFile(file: File): { valid: boolean; error?: string } {
+    const extension = file.name.toLowerCase().split('.').pop();
+    
+    // Check file extension
+    if (!['dek', 'txt'].includes(extension || '')) {
+      return { valid: false, error: 'File must have .dek or .txt extension' };
+    }
+
+    // Check file size (reasonable limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return { valid: false, error: 'File too large (max 5MB)' };
+    }
+
+    if (file.size === 0) {
+      return { valid: false, error: 'File is empty' };
+    }
+
+    return { valid: true };
+  }
 
   /**
    * Parse MTGO .dek file content (XML format)
@@ -205,9 +246,9 @@ export class DekParser {
   }
 
   /**
-   * Parse a file using the File API
+   * Parse a .dek file using the File API
    */
-  static async parseFile(file: File): Promise<ParsedDeck> {
+  private static async parseDekFile(file: File): Promise<ParsedDeck> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -229,27 +270,6 @@ export class DekParser {
     });
   }
 
-  /**
-   * Validate file before parsing
-   */
-  static validateFile(file: File): { valid: boolean; error?: string } {
-    // Check file extension
-    if (!file.name.toLowerCase().endsWith('.dek')) {
-      return { valid: false, error: 'File must have .dek extension' };
-    }
-
-    // Check file size (reasonable limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return { valid: false, error: 'File too large (max 5MB)' };
-    }
-
-    if (file.size === 0) {
-      return { valid: false, error: 'File is empty' };
-    }
-
-    return { valid: true };
-  }
 
   /**
    * Create a sample .dek file content for testing
@@ -299,3 +319,6 @@ export class DekParser {
     };
   }
 }
+
+// Export with old name for backward compatibility
+export const DekParser = DeckParser;

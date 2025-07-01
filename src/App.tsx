@@ -17,6 +17,7 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('contribution');
   const [currentView, setCurrentView] = useState<'upload' | 'dashboard'>('upload');
+  const [testMode, setTestMode] = useState(false);
 
   // Test database connection and initialize price updates on load
   useEffect(() => {
@@ -28,6 +29,10 @@ function App() {
         console.log('🔄 React: About to call setIsConnected with:', connected);
         setIsConnected(connected);
         console.log('🔄 React: setIsConnected called');
+
+        // Make DatabaseService available globally for debugging
+        (window as any).DatabaseService = DatabaseService;
+        console.log('🛠️ DatabaseService is now available globally for debugging');
 
         // Initialize price updates if connected
         if (connected) {
@@ -65,6 +70,12 @@ function App() {
 
   const clearResults = () => {
     setUploadResults([]);
+  };
+
+  // Handle test mode toggle
+  const handleTestModeToggle = (enabled: boolean) => {
+    setTestMode(enabled);
+    DatabaseService.setTestMode(enabled);
   };
 
   // Connection status indicator
@@ -238,6 +249,42 @@ function App() {
                 <p className="text-sm">
                   This is the MVP version - we'll add more features like progress tracking and export soon!
                 </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Test Mode Toggle - Bottom of Page */}
+        {isConnected && (
+          <section className="mt-12 pt-8 border-t border-gray-200">
+            <div className="max-w-2xl mx-auto">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={testMode}
+                        onChange={(e) => handleTestModeToggle(e.target.checked)}
+                        className="w-4 h-4 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-800">Test Mode</span>
+                        <span className="text-sm text-gray-600 ml-2">- Preview uploads without saving to database</span>
+                      </div>
+                    </label>
+                  </div>
+                  {testMode && (
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">
+                      🧪 TEST MODE ACTIVE
+                    </span>
+                  )}
+                </div>
+                {testMode && (
+                  <p className="mt-2 text-sm text-yellow-700">
+                    Uploads will be parsed and validated, but no data will be saved. Check the browser console for details.
+                  </p>
+                )}
               </div>
             </div>
           </section>

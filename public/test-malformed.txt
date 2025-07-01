@@ -1,0 +1,7 @@
+Lightning Bolt
+4
+Invalid Line Format
+x10 Mountain
+-5 Negative Quantity
+0 Zero Quantity
+15 Valid Card Name With Spaces

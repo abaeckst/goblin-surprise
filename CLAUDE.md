@@ -32,7 +32,7 @@ npm run deploy     # Deploy to GitHub Pages
 
 ### Core Data Flow
 ```
-MTGO .dek Upload → XML Parse → Database Insert → Real-time Update → Dashboard Refresh
+MTGO .dek/.txt Upload → Format Detection → Parse (XML/Text) → Database Insert → Real-time Update → Dashboard Refresh
 ```
 
 ### Database Schema
@@ -43,8 +43,9 @@ MTGO .dek Upload → XML Parse → Database Insert → Real-time Update → Dash
 - `change_log` - Audit trail for all modifications
 
 ### Key Services
-- `src/services/supabase.ts` - Database operations and real-time subscriptions
-- `src/services/dekParser.ts` - MTGO .dek file XML parsing (enhanced for multiple formats)
+- `src/services/supabase.ts` - Database operations, real-time subscriptions, and test mode functionality
+- `src/services/deckParser.ts` - Universal deck parser with format detection (.dek/.txt)
+- `src/services/txtParser.ts` - Plain text deck file parsing with sideboard filtering
 - `src/services/requirementsService.ts` - MAX quantity calculation and card status logic
 - `src/services/scryfallApi.ts` - Card metadata and price fetching from Scryfall API with robust cross-printing search
 - `src/services/scryfallPriceService.ts` - MTGO price data management and caching
@@ -91,13 +92,14 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 ```
 
 ### File Processing
-- Accepts MTGO .dek format (XML-based)
-- Supports both element-based and attribute-based XML formats
-- Automatic sideboard card filtering
-- Duplicate card consolidation
-- Client-side parsing only (no server storage)
-- Contributor name required for each upload
-- Error handling for malformed XML and invalid data
+- **Dual Format Support**: Accepts both MTGO .dek (XML) and .txt (plain text) formats
+- **XML Processing**: Supports both element-based and attribute-based XML formats
+- **Text Processing**: Simple `<quantity> <card name>` format with automatic sideboard filtering
+- **Format Detection**: Automatic detection based on file extension
+- **Validation**: Comprehensive error handling for malformed files and invalid data
+- **Client-side Only**: No server-side file storage required
+- **Contributor Tracking**: Name required for each upload
+- **Duplicate Handling**: Automatic card consolidation and quantity aggregation
 
 ## Development Guidelines
 
@@ -135,7 +137,7 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 **Session 5 (COMPLETE):** ✅ MTGO Card Pricing System Integration with full price display
 **Session 6 (COMPLETE):** ✅ Production deployment preparation with UI cleanup and polish
 
-**Current Status:** Full MVP complete with production-ready deployment. All features working including real-time MTGO pricing, contributions tracking, and clean production interface.
+**Current Status:** Full MVP complete with production-ready deployment. All features working including real-time MTGO pricing, contributions tracking, dual format file support (.dek/.txt), test mode for safe development, and clean production interface.
 
 ## Recent Enhancements
 
@@ -218,9 +220,34 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - ✅ Clean deployment-ready build optimized for GitHub Pages (Session 6)
 - ✅ Recent Contributions panel performance optimization with historical data support (Latest)
 
+### Dual Format File Support (.dek/.txt) - COMPLETE ✅
+- **Universal Deck Parser:** New `deckParser.ts` with automatic format detection based on file extension
+- **Plain Text Parser:** Dedicated `txtParser.ts` for simple text format (`<quantity> <card name>` per line)
+- **Format Support:** Both .dek (XML) and .txt (plain text) files accepted in all upload interfaces
+- **Backward Compatibility:** Maintained full compatibility with existing .dek files and workflows
+- **Sideboard Handling:** Automatic filtering of sideboard cards in both formats (XML attributes and empty line detection)
+- **Error Handling:** Comprehensive validation and error reporting for both file formats
+- **Test Files:** Created comprehensive test suite including malformed files for validation testing
+- **UI Updates:** Updated upload interfaces to clearly indicate support for both formats
+
+### Test Mode System - COMPLETE ✅
+- **Safe Development:** Complete test mode system for uploading without database pollution
+- **Database Service Integration:** Test mode flag integrated into all database write operations
+- **Console Logging:** Detailed console output showing exactly what would be saved to database
+- **UI Indicators:** Clear visual indicators when test mode is active across all components
+- **Upload Flow Testing:** Full upload process validation without data persistence
+- **Requirements Testing:** Test mode works for both contributions and requirements uploads
+- **Developer Tools:** Global DatabaseService access for debugging and manual database operations
+- **Bottom Placement:** Test mode toggle positioned at bottom of page for clean UI
+
 ## Development Workflow
 
-**Session-Based Approach:** Each session builds working, testable functionality before moving to next phase. Test incrementally with provided .dek files in `/public/` directory.
+**Session-Based Approach:** Each session builds working, testable functionality before moving to next phase. Test incrementally with provided files in `/public/` directory.
+
+**Test Files Available:**
+- `.dek` files: Various XML-based MTGO deck exports for testing existing functionality
+- `.txt` files: Plain text deck lists including `test-burn-deck.txt`, `test-minimal-deck.txt`, `test-sideboard.txt` (with sideboard filtering), and `test-malformed.txt` (for error handling validation)
+- `Izzet Prowess PT.txt`: Real deck example for comprehensive testing
 
 **Real-time First:** Implement Supabase subscriptions immediately when building features for live collaboration.
 
@@ -232,5 +259,6 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - Supabase free tier rate limits  
 - Client-side file processing only
 - No user authentication (public contribution model)
-- MTGO .dek format dependency
+- MTGO deck file dependency (.dek XML or .txt plain text formats)
 - 6-session development timeline for complete MVP with production deployment (COMPLETE)
+- Test mode available for safe development without database pollution

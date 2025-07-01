@@ -27,9 +27,95 @@ export const subscribeToChanges = (
 
 // Helper functions for common database operations
 export class DatabaseService {
+  // Test mode flag - when true, database writes are logged but not executed
+  static testMode = false;
+  
+  // Enable/disable test mode
+  static setTestMode(enabled: boolean) {
+    this.testMode = enabled;
+    console.log(`🧪 Test mode ${enabled ? 'ENABLED' : 'DISABLED'}`);
+  }
+
+  // Helper function to list all requirement decks
+  static async listAllRequirementDecks() {
+    console.log('📋 Fetching all requirement decks...');
+    
+    const { data, error } = await supabase
+      .from('requirement_decks')
+      .select('id, deck_name, uploaded_by, created_at')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching requirement decks:', error);
+      throw error;
+    }
+    
+    console.table(data);
+    return data;
+  }
+
+  // Cleanup function to delete specific requirements (for development use)
+  static async deleteRequirementsByDeckName(deckName: string) {
+    console.log(`🗑️ Attempting to delete requirements for deck: ${deckName}`);
+    
+    // First, get the deck ID
+    const { data: deck, error: deckError } = await supabase
+      .from('requirement_decks')
+      .select('id, deck_name')
+      .ilike('deck_name', `%${deckName}%`)
+      .single();
+    
+    if (deckError || !deck) {
+      console.error('Deck not found:', deckError);
+      console.log('💡 Try running: DatabaseService.listAllRequirementDecks() to see all decks');
+      throw new Error(`Deck "${deckName}" not found`);
+    }
+    
+    console.log(`📋 Found deck: "${deck.deck_name}" with ID: ${deck.id}`);
+    
+    // Delete requirement cards first (foreign key constraint)
+    const { error: cardsError } = await supabase
+      .from('requirement_cards')
+      .delete()
+      .eq('deck_id', deck.id);
+    
+    if (cardsError) {
+      console.error('Error deleting requirement cards:', cardsError);
+      throw cardsError;
+    }
+    
+    // Then delete the deck
+    const { error: deckDeleteError } = await supabase
+      .from('requirement_decks')
+      .delete()
+      .eq('id', deck.id);
+    
+    if (deckDeleteError) {
+      console.error('Error deleting requirement deck:', deckDeleteError);
+      throw deckDeleteError;
+    }
+    
+    console.log(`✅ Successfully deleted requirements for "${deck.deck_name}"`);
+    return deck.id;
+  }
   
   // Gathered cards operations
   static async insertGatheredCards(cards: Database['public']['Tables']['gathered_cards']['Insert'][]) {
+    if (this.testMode) {
+      console.log('\n=== TEST MODE ACTIVE ===');
+      console.log('Would insert gathered cards:');
+      console.table(cards.map(card => ({
+        card_name: card.card_name,
+        quantity: card.quantity,
+        contributor: card.contributor_name,
+        deck: card.deck_filename
+      })));
+      console.log(`Total cards to insert: ${cards.length}`);
+      console.log(`Total quantity: ${cards.reduce((sum, card) => sum + (card.quantity || 0), 0)}`);
+      console.log('=== END TEST MODE ===\n');
+      return null; // Return null in test mode
+    }
+
     const { data, error } = await supabase
       .from('gathered_cards')
       .insert(cards);
@@ -72,6 +158,18 @@ export class DatabaseService {
   }
 
   static async insertRequirementDeck(deck: Database['public']['Tables']['requirement_decks']['Insert']) {
+    if (this.testMode) {
+      console.log('\n=== TEST MODE ACTIVE ===');
+      console.log('Would insert requirement deck:');
+      console.table({
+        deck_name: deck.deck_name,
+        uploaded_by: deck.uploaded_by
+      });
+      console.log('=== END TEST MODE ===\n');
+      // Return a mock deck with a fake ID for testing
+      return { id: 'test-deck-id', ...deck } as any;
+    }
+
     console.log('🎯 Attempting to insert requirement deck:', deck);
     
     const { data, error } = await supabase
@@ -92,6 +190,19 @@ export class DatabaseService {
   }
 
   static async insertRequirementCards(cards: Database['public']['Tables']['requirement_cards']['Insert'][]) {
+    if (this.testMode) {
+      console.log('\n=== TEST MODE ACTIVE ===');
+      console.log('Would insert requirement cards:');
+      console.table(cards.map(card => ({
+        card_name: card.card_name,
+        quantity: card.quantity,
+        deck_id: card.deck_id
+      })));
+      console.log(`Total requirement cards: ${cards.length}`);
+      console.log('=== END TEST MODE ===\n');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('requirement_cards')
       .insert(cards);

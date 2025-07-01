@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Target, AlertCircle, FileText, User } from 'lucide-react';
-import { DekParser } from '../../services/dekParser';
+import { DeckParser } from '../../services/deckParser';
 import { DatabaseService } from '../../services/supabase';
 import type { UploadResult, UploadState } from '../../types/uploads';
 
@@ -28,14 +28,14 @@ export const RequirementsUpload: React.FC<RequirementsUploadProps> = ({
   const processFile = async (file: File): Promise<UploadResult> => {
     try {
       // Validate file
-      const validation = DekParser.validateFile(file);
+      const validation = DeckParser.validateFile(file);
       if (!validation.valid) {
         throw new Error(validation.error);
       }
 
-      // Parse the .dek file
+      // Parse the deck file
       setUploadState(prev => ({ ...prev, currentFile: file.name, progress: 25 }));
-      const parsedDeck = await DekParser.parseFile(file);
+      const parsedDeck = await DeckParser.parseFile(file);
       
       console.log('🎯 Parsed requirement deck result:', parsedDeck);
       
@@ -50,7 +50,7 @@ export const RequirementsUpload: React.FC<RequirementsUploadProps> = ({
 
       // Insert requirement deck first
       const deckData = {
-        deck_name: deckName.trim() || file.name.replace('.dek', ''),
+        deck_name: deckName.trim() || file.name.replace(/\.(dek|txt)$/i, ''),
         uploaded_by: uploaderName.trim()
       };
 
@@ -124,13 +124,14 @@ export const RequirementsUpload: React.FC<RequirementsUploadProps> = ({
         error: error instanceof Error ? error.message : 'Upload failed'
       });
     }
-  }, [deckName, uploaderName, onUploadComplete, onUploadStart, processFile]);
+  }, [deckName, uploaderName, onUploadComplete, onUploadStart]);
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: {
       'text/xml': ['.dek'],
-      'application/xml': ['.dek']
+      'application/xml': ['.dek'],
+      'text/plain': ['.txt']
     },
     multiple: false, // Requirements upload typically one deck at a time
     disabled: disabled || uploadState.uploading || !uploaderName.trim(),
@@ -149,6 +150,7 @@ export const RequirementsUpload: React.FC<RequirementsUploadProps> = ({
         <Target className="h-6 w-6 text-purple-600" />
         Upload Target Deck Requirements
         {disabled && <span className="text-red-500 text-sm ml-2">(Database not connected)</span>}
+        {DatabaseService.testMode && <span className="text-yellow-600 text-sm ml-2">(Test Mode)</span>}
       </h2>
 
       {/* Uploader Name Input */}
@@ -228,12 +230,12 @@ export const RequirementsUpload: React.FC<RequirementsUploadProps> = ({
                 {isDragActive 
                   ? 'Drop requirement deck here...' 
                   : isReady
-                    ? 'Drag and drop target deck .dek file here, or click to browse'
+                    ? 'Drag and drop target deck file here (.dek or .txt), or click to browse'
                     : 'Enter your name first to enable file upload'
                 }
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                One deck file • Max 5MB
+                One deck file (.dek or .txt) • Max 5MB
               </p>
             </div>
           </div>
@@ -273,7 +275,7 @@ export const RequirementsUpload: React.FC<RequirementsUploadProps> = ({
       {/* Instructions */}
       <div className="mt-6 text-xs text-gray-500 space-y-1 bg-purple-50 p-3 rounded border border-purple-200">
         <p className="font-medium text-purple-700">Requirements Upload:</p>
-        <p>• Upload MTGO .dek files that represent your target deck builds</p>
+        <p>• Upload MTGO deck files (.dek or .txt) that represent your target deck builds</p>
         <p>• These define what cards you need to complete your collection</p>
         <p>• Cards from multiple requirement decks use MAX quantity logic</p>
         <p>• Use a separate upload for each target deck configuration</p>
