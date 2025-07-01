@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/goblin-surprise/static/css/main.f35b026a.css",
-    "main.js": "/goblin-surprise/static/js/main.3e670cdc.js",
+    "main.css": "/goblin-surprise/static/css/main.aa01b520.css",
+    "main.js": "/goblin-surprise/static/js/main.41cfebba.js",
     "static/js/453.bfc833a9.chunk.js": "/goblin-surprise/static/js/453.bfc833a9.chunk.js",
     "index.html": "/goblin-surprise/index.html",
-    "main.f35b026a.css.map": "/goblin-surprise/static/css/main.f35b026a.css.map",
-    "main.3e670cdc.js.map": "/goblin-surprise/static/js/main.3e670cdc.js.map",
+    "main.aa01b520.css.map": "/goblin-surprise/static/css/main.aa01b520.css.map",
+    "main.41cfebba.js.map": "/goblin-surprise/static/js/main.41cfebba.js.map",
     "453.bfc833a9.chunk.js.map": "/goblin-surprise/static/js/453.bfc833a9.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.f35b026a.css",
-    "static/js/main.3e670cdc.js"
+    "static/css/main.aa01b520.css",
+    "static/js/main.41cfebba.js"
   ]
 }
