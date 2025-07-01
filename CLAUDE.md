@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Goblin Surprise MTG Collection Rebuilder** - A React web application for rebuilding a stolen Magic: The Gathering collection through collaborative friend contributions. Users upload MTGO .dek files to contribute cards and track progress toward completing target decks.
+**Goblin Surprise MTG Collection Rebuilder** - A React web application for rebuilding a stolen Magic: The Gathering collection through collaborative friend contributions. Users can upload MTGO .dek files to contribute cards, log monetary donations (USD/MTGO tix), and track progress toward completing target decks.
 
 ## Commands
 
@@ -32,13 +32,15 @@ npm run deploy     # Deploy to GitHub Pages
 
 ### Core Data Flow
 ```
-MTGO .dek/.txt Upload → Format Detection → Parse (XML/Text) → Database Insert → Real-time Update → Dashboard Refresh
+Card Contributions: MTGO .dek/.txt Upload → Format Detection → Parse (XML/Text) → Database Insert → Real-time Update → Dashboard Refresh
+Monetary Donations: Donation Form → Validation → Database Insert → Real-time Update → Progress Recalculation
 ```
 
 ### Database Schema
 - `requirement_decks` - Target deck configurations
 - `requirement_cards` - Cards needed per deck
 - `gathered_cards` - Contributed cards with contributor tracking
+- `monetary_donations` - **NEW**: Cash and MTGO tix donations with contributor tracking
 - `card_metadata` - Scryfall API data (mana cost, type, rarity, colors, **MTGO prices**)
 - `change_log` - Audit trail for all modifications
 
@@ -58,21 +60,23 @@ src/components/
 │   ├── FileUpload.tsx         # Contribution deck uploads
 │   ├── RequirementsUpload.tsx # Target deck requirements uploads
 │   └── UploadResults.tsx      # Upload success/error display
+├── donations/        # **NEW**: Monetary donation system
+│   └── MonetaryDonationForm.tsx # Form for logging USD/MTGO tix donations
 ├── dashboard/        # Progress tracking and visualization
-│   ├── Dashboard.tsx          # Main progress dashboard
-│   ├── ProgressBar.tsx        # Completion percentage visual
-│   ├── ProgressSummary.tsx    # Legacy summary component
-│   └── RecentContributions.tsx # Optimized recent contributions with batch data fetching
+│   ├── Dashboard.tsx          # Main progress dashboard with monetary donation integration
+│   ├── ProgressBar.tsx        # Completion percentage visual (1 decimal place)
+│   ├── ProgressSummary.tsx    # Summary component with value-based contributor rankings
+│   └── RecentContributions.tsx # Shows both card and monetary contributions with visual distinction
 ├── cards/           # Card display tables and management
 │   ├── OutstandingCardsTable.tsx # Cards still needed (RED)
 │   └── GatheredCardsTable.tsx    # Contributed cards (all statuses)
-├── debug/           # Advanced debugging and fixing tools
+├── debug/           # Advanced debugging and fixing tools (removed from production)
 │   ├── MetadataFixer.tsx         # Fixes cards missing metadata entirely
 │   ├── PriceFixer.tsx            # Robust price discovery across all printings
 │   ├── PricingDebug.tsx          # Basic pricing debug information
 │   └── ComprehensivePricingDebug.tsx # Complete card status overview
 └── common/          # Shared UI components
-    └── UploadModeToggle.tsx      # Switch between upload modes
+    └── UploadModeToggle.tsx      # **UPDATED**: Three-way toggle (Cards → Donations → Requirements)
 ```
 
 ## Business Logic
@@ -89,6 +93,21 @@ outstanding_quantity = required_quantity - gathered_quantity
 RED: outstanding_quantity > 0 (cards still needed)
 BLUE: outstanding_quantity === 0 (exact match)
 GREEN: outstanding_quantity < 0 (surplus cards)
+```
+
+### **NEW: Monetary Donation System**
+```typescript
+// Donation tracking (1:1 USD to MTGO tix conversion)
+monetary_donations = SUM(amount) from all donations
+
+// Value-based progress calculation
+total_required_value = SUM(card_price * required_quantity)
+total_contributed_value = card_collection_value + monetary_donations
+adjusted_outstanding_value = MAX(0, total_required_value - total_contributed_value)
+completion_percentage = (total_contributed_value / total_required_value) * 100
+
+// Contributor rankings (by total value, not card count)
+contributor_value = card_contribution_value + monetary_donation_amount
 ```
 
 ### File Processing
@@ -136,12 +155,25 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 **Session 4 (COMPLETE):** ✅ Export functionality, production build optimization, and deployment preparation
 **Session 5 (COMPLETE):** ✅ MTGO Card Pricing System Integration with full price display
 **Session 6 (COMPLETE):** ✅ Production deployment preparation with UI cleanup and polish
+**Session 7 (COMPLETE):** ✅ **Monetary Donation System** - Full integration of USD/MTGO tix donation tracking
 
-**Current Status:** Full MVP complete with production-ready deployment. All features working including real-time MTGO pricing, contributions tracking, dual format file support (.dek/.txt), test mode for safe development, and clean production interface.
+**Current Status:** Full MVP complete with **monetary donation system** and production-ready deployment. All features working including real-time MTGO pricing, card contributions tracking, **monetary donation logging**, dual format file support (.dek/.txt), test mode for safe development, and clean production interface.
 
 ## Recent Enhancements
 
-### Recent Contributions Panel Optimization (Latest) - COMPLETE ✅
+### **Monetary Donation System Integration (Session 7) - COMPLETE ✅**
+- **Database Schema:** Added `monetary_donations` table with contributor tracking, amount, donation type (USD/tix), and optional notes
+- **Three-Way Upload Toggle:** Enhanced upload interface with "Contribute Cards → Log Donation → Set Requirements" workflow
+- **Value-Based Progress:** Unified progress calculation using monetary donations + card values for accurate completion tracking
+- **Real-time Integration:** Live updates across Dashboard and Recent Contributions when donations are logged
+- **Contributor Rankings:** Updated leaderboard to rank by total monetary value (cards + donations) instead of card count
+- **Visual Distinction:** Monetary donations display with green credit card icons vs blue card contribution icons
+- **Progress Breakdown:** Dashboard shows detailed breakdown of card value vs donation value contributing to progress
+- **Decimal Precision:** Fixed progress percentages to display 1 decimal place (75.3% instead of 75.287%)
+- **Consistent Calculations:** Both Dashboard and Upload tabs now use identical progress calculation methods
+- **Test Mode Support:** Full test mode integration for safe donation logging during development
+
+### Recent Contributions Panel Optimization - COMPLETE ✅
 - **Data Fetching Overhaul:** Replaced inefficient multiple queries with single batch query for all gathered cards
 - **Performance Improvement:** Eliminated N+1 query problem by fetching all data at once and processing client-side
 - **Historical Data Support:** Now accurately displays card counts and dollar values for ALL past contributions
@@ -218,7 +250,8 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - ✅ Production-ready interface without development tools (Session 6)
 - ✅ Accurate contributions panel with real progress tracking (Session 6)
 - ✅ Clean deployment-ready build optimized for GitHub Pages (Session 6)
-- ✅ Recent Contributions panel performance optimization with historical data support (Latest)
+- ✅ Recent Contributions panel performance optimization with historical data support
+- ✅ **Monetary Donation System with full integration and real-time updates (Session 7)**
 
 ### Dual Format File Support (.dek/.txt) - COMPLETE ✅
 - **Universal Deck Parser:** New `deckParser.ts` with automatic format detection based on file extension
@@ -231,12 +264,12 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - **UI Updates:** Updated upload interfaces to clearly indicate support for both formats
 
 ### Test Mode System - COMPLETE ✅
-- **Safe Development:** Complete test mode system for uploading without database pollution
-- **Database Service Integration:** Test mode flag integrated into all database write operations
+- **Safe Development:** Complete test mode system for all operations without database pollution
+- **Database Service Integration:** Test mode flag integrated into all database write operations (cards + donations)
 - **Console Logging:** Detailed console output showing exactly what would be saved to database
 - **UI Indicators:** Clear visual indicators when test mode is active across all components
-- **Upload Flow Testing:** Full upload process validation without data persistence
-- **Requirements Testing:** Test mode works for both contributions and requirements uploads
+- **Full Flow Testing:** Upload process validation and donation logging without data persistence
+- **Monetary Donation Testing:** Test mode works for card contributions, monetary donations, and requirements uploads
 - **Developer Tools:** Global DatabaseService access for debugging and manual database operations
 - **Bottom Placement:** Test mode toggle positioned at bottom of page for clean UI
 
@@ -260,5 +293,5 @@ GREEN: outstanding_quantity < 0 (surplus cards)
 - Client-side file processing only
 - No user authentication (public contribution model)
 - MTGO deck file dependency (.dek XML or .txt plain text formats)
-- 6-session development timeline for complete MVP with production deployment (COMPLETE)
+- 7-session development timeline for complete MVP with monetary donation system and production deployment (COMPLETE)
 - Test mode available for safe development without database pollution

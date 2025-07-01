@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Target, Users, Hash, TrendingUp, Database, DollarSign } from 'lucide-react';
 import { RequirementsService } from '../../services/requirementsService';
-import { subscribeToChanges } from '../../services/supabase';
+import { subscribeToChanges, DatabaseService } from '../../services/supabase';
 
 interface ProgressStats {
   totalCardsGathered: number;
@@ -38,10 +38,11 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
       setError(null);
 
       // Use RequirementsService to get proper progress stats with pricing
-      const [outstandingCards, gatheredCards, progressStats] = await Promise.all([
+      const [outstandingCards, gatheredCards, progressStats, monetaryDonations] = await Promise.all([
         RequirementsService.getOutstandingCards(),
         RequirementsService.getGatheredCards(),
-        RequirementsService.getProgressStats()
+        RequirementsService.getProgressStats(),
+        DatabaseService.getTotalMonetaryDonations()
       ]);
 
       // Calculate price statistics
@@ -54,6 +55,16 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
         const price = card.metadata?.price_tix || 0;
         return total + (price * card.outstanding_quantity);
       }, 0);
+
+      // Adjust outstanding value by monetary donations (same as Dashboard)
+      const adjustedOutstandingValue = Math.max(0, totalOutstandingValue - monetaryDonations);
+
+      // Calculate new completion percentage including monetary donations (same as Dashboard)
+      const totalRequiredValue = totalCollectionValue + totalOutstandingValue;
+      const totalContributedValue = totalCollectionValue + monetaryDonations;
+      const valueBasedCompletionPercentage = totalRequiredValue > 0 
+        ? Math.min(100, (totalContributedValue / totalRequiredValue) * 100)
+        : 0;
 
       // Calculate contributor stats with values
       const contributorStats = new Map<string, { cardCount: number; totalValue: number }>();
@@ -70,6 +81,14 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
         }
       });
 
+      // Add monetary donations to contributor stats
+      const monetaryDonationsList = await DatabaseService.getMonetaryDonations();
+      monetaryDonationsList.forEach(donation => {
+        const existing = contributorStats.get(donation.contributor_name) || { cardCount: 0, totalValue: 0 };
+        existing.totalValue += donation.amount;
+        contributorStats.set(donation.contributor_name, existing);
+      });
+
       // Get top contributors
       const topContributors = Array.from(contributorStats.entries())
         .map(([name, stats]) => ({ 
@@ -77,7 +96,7 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
           cardCount: stats.cardCount,
           totalValue: stats.totalValue 
         }))
-        .sort((a, b) => b.cardCount - a.cardCount)
+        .sort((a, b) => b.totalValue - a.totalValue)
         .slice(0, 5);
 
       const combinedStats: ProgressStats = {
@@ -86,9 +105,9 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
         uniqueCardsGathered: progressStats.totalUniqueCards,
         uniqueCardsRequired: progressStats.totalUniqueCards,
         totalContributors: contributorStats.size,
-        completionPercentage: progressStats.completionPercentage,
+        completionPercentage: valueBasedCompletionPercentage,
         totalCollectionValue,
-        totalOutstandingValue,
+        totalOutstandingValue: adjustedOutstandingValue,
         topContributors
       };
 
@@ -116,9 +135,15 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
       setTimeout(loadProgressStats, 500);
     });
 
+    const monetaryChannel = DatabaseService.subscribeToMonetaryDonations(() => {
+      console.log('Progress stats update triggered by monetary_donations change');
+      setTimeout(loadProgressStats, 500);
+    });
+
     return () => {
       gatheredChannel.unsubscribe();
       requirementChannel.unsubscribe();
+      monetaryChannel.unsubscribe();
     };
   }, []);
 
@@ -185,7 +210,7 @@ export const ProgressSummary: React.FC<ProgressSummaryProps> = ({ className = ''
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">Overall Progress</span>
-          <span className="text-sm font-bold text-gray-900">{stats.completionPercentage}%</span>
+          <span className="text-sm font-bold text-gray-900">{stats.completionPercentage.toFixed(1)}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4">
           <div

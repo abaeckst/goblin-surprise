@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, BarChart3, Download, Check, DollarSign } from 'lucide-react';
 import { RequirementsService } from '../../services/requirementsService';
-import { subscribeToChanges } from '../../services/supabase';
+import { subscribeToChanges, DatabaseService } from '../../services/supabase';
 import PriceUpdateService from '../../services/priceUpdateService';
 import { ProgressBar } from './ProgressBar';
 import { OutstandingCardsTable } from '../cards/OutstandingCardsTable';
@@ -23,7 +23,8 @@ export const Dashboard: React.FC = () => {
     completionPercentage: 0,
     totalUniqueCards: 0,
     totalCollectionValue: 0,
-    totalOutstandingValue: 0
+    totalOutstandingValue: 0,
+    totalMonetaryDonations: 0
   });
   const [exportCopied, setExportCopied] = useState(false);
   const [priceUpdateStatus, setPriceUpdateStatus] = useState(PriceUpdateService.getStatus());
@@ -71,10 +72,11 @@ export const Dashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [outstanding, gathered, stats] = await Promise.all([
+      const [outstanding, gathered, stats, monetaryDonations] = await Promise.all([
         RequirementsService.getOutstandingCards(),
         RequirementsService.getGatheredCards(),
-        RequirementsService.getProgressStats()
+        RequirementsService.getProgressStats(),
+        DatabaseService.getTotalMonetaryDonations()
       ]);
 
       // Calculate price statistics
@@ -88,12 +90,24 @@ export const Dashboard: React.FC = () => {
         return total + (price * card.outstanding_quantity);
       }, 0);
 
+      // Adjust outstanding value by monetary donations
+      const adjustedOutstandingValue = Math.max(0, totalOutstandingValue - monetaryDonations);
+
+      // Calculate new completion percentage including monetary donations
+      const totalRequiredValue = totalCollectionValue + totalOutstandingValue;
+      const totalContributedValue = totalCollectionValue + monetaryDonations;
+      const valueBasedCompletionPercentage = totalRequiredValue > 0 
+        ? Math.min(100, (totalContributedValue / totalRequiredValue) * 100)
+        : 0;
+
       setOutstandingCards(outstanding);
       setGatheredCards(gathered);
       setProgressStats({
         ...stats,
         totalCollectionValue,
-        totalOutstandingValue
+        totalOutstandingValue: adjustedOutstandingValue,
+        totalMonetaryDonations: monetaryDonations,
+        completionPercentage: valueBasedCompletionPercentage
       });
 
     } catch (err) {
@@ -153,6 +167,11 @@ export const Dashboard: React.FC = () => {
       loadDashboardData();
     });
 
+    const monetaryDonationsSubscription = DatabaseService.subscribeToMonetaryDonations(() => {
+      console.log('Real-time update: monetary_donations changed');
+      loadDashboardData();
+    });
+
     // Subscribe to price update status changes
     const priceUpdateUnsubscribe = PriceUpdateService.onStatusChange((status) => {
       setPriceUpdateStatus(status);
@@ -163,6 +182,7 @@ export const Dashboard: React.FC = () => {
       gatheredSubscription.unsubscribe();
       requirementCardsSubscription.unsubscribe();
       requirementDecksSubscription.unsubscribe();
+      monetaryDonationsSubscription.unsubscribe();
       priceUpdateUnsubscribe();
     };
   }, []);
@@ -243,6 +263,15 @@ export const Dashboard: React.FC = () => {
         totalOutstandingCards={progressStats.totalOutstandingCards}
       />
 
+      {/* Progress Breakdown */}
+      {progressStats.totalMonetaryDonations > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-sm text-blue-800">
+            <strong>Progress Breakdown:</strong> {formatPrice(progressStats.totalCollectionValue)} from cards + {formatPrice(progressStats.totalMonetaryDonations)} from donations = {formatPrice(progressStats.totalCollectionValue + progressStats.totalMonetaryDonations)} total contribution
+          </div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white rounded-lg shadow p-4 text-center">
@@ -270,6 +299,14 @@ export const Dashboard: React.FC = () => {
           <div className="text-sm text-gray-500">Outstanding Value</div>
         </div>
       </div>
+
+      {/* Monetary Donations Summary */}
+      {progressStats.totalMonetaryDonations > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+          <div className="text-lg font-bold text-green-700">{formatPrice(progressStats.totalMonetaryDonations)}</div>
+          <div className="text-sm text-gray-600">Total Monetary Donations</div>
+        </div>
+      )}
 
       {/* Cards Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

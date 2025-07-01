@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, Hash, Database, DollarSign } from 'lucide-react';
-import { subscribeToChanges, supabase } from '../../services/supabase';
+import { Users, Clock, Hash, Database, DollarSign, CreditCard } from 'lucide-react';
+import { subscribeToChanges, supabase, DatabaseService } from '../../services/supabase';
+import type { MonetaryDonation } from '../../types/database';
 
-interface RecentContribution {
+interface CardContribution {
   id: string;
   contributor_name: string;
   deck_filename: string;
@@ -10,6 +11,10 @@ interface RecentContribution {
   card_count: number;
   total_value: number;
 }
+
+type RecentContribution = 
+  | { type: 'cards'; data: CardContribution }
+  | { type: 'monetary'; data: MonetaryDonation };
 
 interface RecentContributionsProps {
   className?: string;
@@ -25,9 +30,7 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
     return `$${price.toFixed(2)}`;
   };
 
-  // Load initial data
-  useEffect(() => {
-    const loadContributions = async () => {
+  const loadContributions = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -60,8 +63,8 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
           }
         });
         
-        // Process and aggregate contributions client-side
-        const contributionMap = new Map<string, RecentContribution>();
+        // Process and aggregate card contributions client-side
+        const contributionMap = new Map<string, CardContribution>();
         
         allGatheredCards?.forEach(card => {
           const key = `${card.contributor_name}_${card.deck_filename}`;
@@ -85,9 +88,22 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
           contribution.total_value += price * card.quantity;
         });
         
+        // Get monetary donations
+        const monetaryDonations = await DatabaseService.getMonetaryDonations();
+        
+        // Combine card and monetary contributions
+        const allContributions: RecentContribution[] = [
+          ...Array.from(contributionMap.values()).map(c => ({ type: 'cards' as const, data: c })),
+          ...monetaryDonations.map(d => ({ type: 'monetary' as const, data: d }))
+        ];
+        
         // Sort by most recent and take top 10
-        const sortedContributions = Array.from(contributionMap.values())
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        const sortedContributions = allContributions
+          .sort((a, b) => {
+            const dateA = new Date(a.data.created_at);
+            const dateB = new Date(b.data.created_at);
+            return dateB.getTime() - dateA.getTime();
+          })
           .slice(0, 10);
         
         setContributions(sortedContributions);
@@ -103,95 +119,36 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  // Load initial data
+  useEffect(() => {
     loadContributions();
   }, []);
 
-  // Set up real-time subscription
+  // Set up real-time subscriptions
   useEffect(() => {
-    console.log('🔔 Setting up real-time subscription for gathered_cards...');
+    console.log('🔔 Setting up real-time subscriptions...');
     
-    const channel = subscribeToChanges('gathered_cards', (payload) => {
-      console.log('🔔 Real-time update received:', payload);
-      
-      // Reload contributions when new data is inserted
+    // Subscribe to card contributions
+    const cardChannel = subscribeToChanges('gathered_cards', (payload) => {
+      console.log('🔔 Card contribution update received:', payload);
       if (payload.eventType === 'INSERT') {
-        console.log('🔔 New card inserted, refreshing contributions...');
-        
-        // Add a slight delay to ensure data consistency
-        setTimeout(async () => {
-          try {
-            // Use the same efficient approach as initial load
-            const { data: allGatheredCards } = await supabase
-              .from('gathered_cards')
-              .select('*')
-              .order('created_at', { ascending: false });
-            
-            if (!allGatheredCards) return;
-            
-            // Get all unique card names to fetch metadata
-            const uniqueCardNames = new Set<string>();
-            allGatheredCards.forEach(card => uniqueCardNames.add(card.card_name));
-            
-            // Fetch metadata for all cards at once
-            const { data: metadataRows } = await supabase
-              .from('card_metadata')
-              .select('card_name, price_tix')
-              .in('card_name', Array.from(uniqueCardNames));
-            
-            // Create metadata lookup map
-            const metadataMap = new Map<string, number>();
-            metadataRows?.forEach(metadata => {
-              if (metadata.price_tix) {
-                metadataMap.set(metadata.card_name, metadata.price_tix);
-              }
-            });
-            
-            // Process and aggregate contributions client-side
-            const contributionMap = new Map<string, RecentContribution>();
-            
-            allGatheredCards.forEach(card => {
-              const key = `${card.contributor_name}_${card.deck_filename}`;
-              
-              if (!contributionMap.has(key)) {
-                contributionMap.set(key, {
-                  id: key,
-                  contributor_name: card.contributor_name,
-                  deck_filename: card.deck_filename,
-                  created_at: card.created_at,
-                  card_count: 0,
-                  total_value: 0
-                });
-              }
-              
-              const contribution = contributionMap.get(key)!;
-              contribution.card_count += card.quantity;
-              
-              // Add value if we have price metadata
-              const price = metadataMap.get(card.card_name) || 0;
-              contribution.total_value += price * card.quantity;
-            });
-            
-            // Sort by most recent and take top 10
-            const updatedContributions = Array.from(contributionMap.values())
-              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-              .slice(0, 10);
-            
-            setContributions(updatedContributions);
-            console.log('🔔 Contributions updated via real-time subscription');
-            
-          } catch (err) {
-            console.error('Failed to refresh contributions after real-time update:', err);
-          }
-        }, 500);
+        setTimeout(() => loadContributions(), 500);
       }
     });
 
-    // Cleanup subscription on unmount
+    // Subscribe to monetary donations
+    const monetaryChannel = DatabaseService.subscribeToMonetaryDonations(() => {
+      console.log('🔔 Monetary donation update received');
+      setTimeout(() => loadContributions(), 500);
+    });
+
+    // Cleanup subscriptions on unmount
     return () => {
-      console.log('🔔 Cleaning up real-time subscription...');
-      channel.unsubscribe();
+      console.log('🔔 Cleaning up real-time subscriptions...');
+      cardChannel.unsubscribe();
+      monetaryChannel.unsubscribe();
     };
   }, []);
 
@@ -297,44 +254,72 @@ export const RecentContributions: React.FC<RecentContributionsProps> = ({ classN
         </div>
       ) : (
         <div className="space-y-3">
-          {contributions.map((contribution) => (
-            <div
-              key={contribution.id}
-              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-medium text-sm">
-                  {contribution.contributor_name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-800 truncate">
-                    {contribution.contributor_name}
-                  </p>
-                  <span className="text-gray-400">•</span>
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <Hash className="h-3 w-3" />
-                    <span className="text-sm">{contribution.card_count}</span>
-                  </div>
-                  <span className="text-gray-400">•</span>
-                  <div className="flex items-center gap-1 text-green-600">
-                    <DollarSign className="h-3 w-3" />
-                    <span className="text-sm font-medium">{formatPrice(contribution.total_value)}</span>
-                  </div>
+          {contributions.map((contribution) => {
+            const isMonetary = contribution.type === 'monetary';
+            const data = contribution.data;
+            const contributorName = data.contributor_name;
+            const createdAt = data.created_at;
+            
+            return (
+              <div
+                key={isMonetary ? data.id : (data as CardContribution).id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className={`h-8 w-8 ${isMonetary ? 'bg-green-100' : 'bg-blue-100'} rounded-full flex items-center justify-center`}>
+                  {isMonetary ? (
+                    <CreditCard className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <span className="text-blue-600 font-medium text-sm">
+                      {contributorName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 truncate">
-                  {contribution.deck_filename}
-                </p>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-gray-800 truncate">
+                      {contributorName}
+                    </p>
+                    <span className="text-gray-400">•</span>
+                    {isMonetary ? (
+                      <>
+                        <div className="flex items-center gap-1 text-green-600">
+                          <DollarSign className="h-3 w-3" />
+                          <span className="text-sm font-medium">{formatPrice((data as MonetaryDonation).amount)}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          ({(data as MonetaryDonation).donation_type.toUpperCase()})
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Hash className="h-3 w-3" />
+                          <span className="text-sm">{(data as CardContribution).card_count}</span>
+                        </div>
+                        <span className="text-gray-400">•</span>
+                        <div className="flex items-center gap-1 text-green-600">
+                          <DollarSign className="h-3 w-3" />
+                          <span className="text-sm font-medium">{formatPrice((data as CardContribution).total_value)}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 truncate">
+                    {isMonetary ? 
+                      ((data as MonetaryDonation).notes || 'Monetary donation') : 
+                      (data as CardContribution).deck_filename
+                    }
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-1 text-gray-500 text-xs">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatTimeAgo(createdAt)}</span>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-1 text-gray-500 text-xs">
-                <Clock className="h-3 w-3" />
-                <span>{formatTimeAgo(contribution.created_at)}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

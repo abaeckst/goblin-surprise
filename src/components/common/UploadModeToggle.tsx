@@ -1,7 +1,7 @@
 import React from 'react';
-import { Upload, Target } from 'lucide-react';
+import { Upload, Target, DollarSign } from 'lucide-react';
 
-export type UploadMode = 'contribution' | 'requirements';
+export type UploadMode = 'contribution' | 'requirements' | 'monetary';
 
 interface UploadModeToggleProps {
   mode: UploadMode;
@@ -30,6 +30,22 @@ export const UploadModeToggle: React.FC<UploadModeToggleProps> = ({
       >
         <Upload className="h-4 w-4" />
         Contribute Cards
+      </button>
+      
+      <button
+        onClick={() => onModeChange('monetary')}
+        disabled={disabled}
+        className={`
+          flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 flex-1 justify-center
+          ${mode === 'monetary'
+            ? 'bg-white text-green-600 shadow-sm'
+            : 'text-gray-600 hover:text-gray-800'
+          }
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+      >
+        <DollarSign className="h-4 w-4" />
+        Log Donation
       </button>
       
       <button

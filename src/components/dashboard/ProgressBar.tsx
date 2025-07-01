@@ -37,7 +37,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           Collection Progress
         </h3>
         <span className="text-2xl font-bold text-gray-900">
-          {completionPercentage}%
+          {completionPercentage.toFixed(1)}%
         </span>
       </div>
 

@@ -46,6 +46,15 @@ export interface ChangeLog {
   changed_at: string;
 }
 
+export interface MonetaryDonation {
+  id: string;
+  contributor_name: string;
+  amount: number;
+  donation_type: 'tix' | 'usd';
+  notes?: string | null;
+  created_at: string;
+}
+
 // Supabase database type
 export interface Database {
   public: {
@@ -74,6 +83,11 @@ export interface Database {
         Row: ChangeLog;
         Insert: Omit<ChangeLog, 'id' | 'changed_at'>;
         Update: Partial<Omit<ChangeLog, 'id' | 'changed_at'>>;
+      };
+      monetary_donations: {
+        Row: MonetaryDonation;
+        Insert: Omit<MonetaryDonation, 'id' | 'created_at'>;
+        Update: Partial<Omit<MonetaryDonation, 'id' | 'created_at'>>;
       };
     };
   };

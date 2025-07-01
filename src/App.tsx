@@ -5,6 +5,7 @@ import { UploadResults } from './components/upload/UploadResults';
 import { RecentContributions } from './components/dashboard/RecentContributions';
 import { ProgressSummary } from './components/dashboard/ProgressSummary';
 import { Dashboard } from './components/dashboard/Dashboard';
+import { MonetaryDonationForm } from './components/donations/MonetaryDonationForm';
 import { UploadModeToggle, type UploadMode } from './components/common/UploadModeToggle';
 import { DatabaseService } from './services/supabase';
 import PriceUpdateService from './services/priceUpdateService';
@@ -200,12 +201,14 @@ function App() {
                   onUploadStart={handleUploadStart}
                   disabled={!isConnected}
                 />
-              ) : (
+              ) : uploadMode === 'requirements' ? (
                 <RequirementsUpload
                   onUploadComplete={handleUploadComplete}
                   onUploadStart={handleUploadStart}
                   disabled={!isConnected}
                 />
+              ) : (
+                <MonetaryDonationForm />
               )}
             </section>
 

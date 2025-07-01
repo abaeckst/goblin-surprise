@@ -319,11 +319,81 @@ export class DatabaseService {
       await supabase.from('gathered_cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('requirement_cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('requirement_decks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('monetary_donations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       console.log('✅ All test data cleared');
       return true;
     } catch (error) {
       console.error('❌ Failed to clear data:', error);
       return false;
     }
+  }
+
+  // Monetary donation operations
+  static async addMonetaryDonation(donation: {
+    contributor_name: string;
+    amount: number;
+    donation_type: 'tix' | 'usd';
+    notes?: string;
+  }) {
+    if (this.testMode) {
+      console.log('🧪 TEST MODE: Would add monetary donation:', donation);
+      return { data: { id: 'test-id', ...donation, created_at: new Date().toISOString() }, error: null };
+    }
+
+    const { data, error } = await supabase
+      .from('monetary_donations')
+      .insert([donation])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Failed to add monetary donation:', error);
+      throw error;
+    }
+
+    console.log('✅ Monetary donation added successfully:', data);
+    return { data, error };
+  }
+
+  static async getMonetaryDonations() {
+    const { data, error } = await supabase
+      .from('monetary_donations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Failed to fetch monetary donations:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  static async getTotalMonetaryDonations(): Promise<number> {
+    const { data, error } = await supabase
+      .from('monetary_donations')
+      .select('amount');
+
+    if (error) {
+      console.error('❌ Failed to fetch monetary donations for total:', error);
+      return 0;
+    }
+
+    return (data || []).reduce((total, donation) => total + Number(donation.amount), 0);
+  }
+
+  static subscribeToMonetaryDonations(callback: () => void) {
+    return supabase
+      .channel('monetary-donations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'monetary_donations',
+        },
+        callback
+      )
+      .subscribe();
   }
 }
