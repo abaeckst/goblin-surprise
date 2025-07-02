@@ -215,6 +215,20 @@ export class DatabaseService {
     return data;
   }
 
+  static async getRequirementDecks() {
+    const { data, error } = await supabase
+      .from('requirement_decks')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching requirement decks:', error);
+      throw error;
+    }
+    
+    return data || [];
+  }
+
   // Get all deck uploads for tracking - Fixed to use distinct instead of group
   static async getDeckUploads() {
     const { data, error } = await supabase
@@ -395,5 +409,112 @@ export class DatabaseService {
         callback
       )
       .subscribe();
+  }
+
+  // Debug: List all monetary donations
+  static async listAllMonetaryDonations() {
+    console.log('💰 Fetching all monetary donations...');
+    
+    const { data, error } = await supabase
+      .from('monetary_donations')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching monetary donations:', error);
+      throw error;
+    }
+    
+    console.table(data);
+    return data || [];
+  }
+
+  // Debug: Delete monetary donation by ID
+  static async deleteMonetaryDonation(id: string) {
+    console.log(`🗑️ Attempting to delete monetary donation with ID: ${id}`);
+    
+    // First check if the donation exists
+    const { data: existing, error: checkError } = await supabase
+      .from('monetary_donations')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (checkError || !existing) {
+      console.error('❌ Donation not found or error checking:', checkError);
+      return false;
+    }
+    
+    console.log('📋 Found donation to delete:', existing);
+    
+    // Try multiple approaches to delete
+    console.log('🔧 Attempting delete with match on multiple fields...');
+    
+    const { data, error, count } = await supabase
+      .from('monetary_donations')
+      .delete()
+      .match({
+        id: id,
+        contributor_name: existing.contributor_name,
+        amount: existing.amount
+      })
+      .select();
+    
+    if (error) {
+      console.error('❌ Error deleting monetary donation:', error);
+      console.error('Error details:', error.message, error.details, error.hint);
+      
+      // Try a simpler delete without select
+      console.log('🔧 Trying simple delete without select...');
+      const { error: simpleError } = await supabase
+        .from('monetary_donations')
+        .delete()
+        .eq('id', id);
+      
+      if (simpleError) {
+        console.error('❌ Simple delete also failed:', simpleError);
+        throw simpleError;
+      }
+    }
+    
+    console.log('🗑️ Delete response:', { data, count });
+    
+    // Verify deletion
+    const { data: checkDeleted, error: verifyError } = await supabase
+      .from('monetary_donations')
+      .select('*')
+      .eq('id', id);
+    
+    if (verifyError) {
+      console.error('❌ Error verifying deletion:', verifyError);
+    } else if (checkDeleted && checkDeleted.length === 0) {
+      console.log('✅ Successfully verified deletion of monetary donation');
+      return true;
+    } else {
+      console.error('❌ Donation still exists after delete attempt!');
+      console.log('Remaining record:', checkDeleted);
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Alternative: Update a monetary donation amount (in case deletion is restricted)
+  static async updateMonetaryDonation(id: string, newAmount: number) {
+    console.log(`📝 Attempting to update donation ${id} to amount: ${newAmount}`);
+    
+    const { data, error } = await supabase
+      .from('monetary_donations')
+      .update({ amount: newAmount })
+      .eq('id', id)
+      .select();
+    
+    if (error) {
+      console.error('❌ Error updating monetary donation:', error);
+      throw error;
+    }
+    
+    console.log('✅ Successfully updated donation:', data);
+    return data;
   }
 }

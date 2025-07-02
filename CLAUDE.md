@@ -60,23 +60,24 @@ src/components/
 │   ├── FileUpload.tsx         # Contribution deck uploads
 │   ├── RequirementsUpload.tsx # Target deck requirements uploads
 │   └── UploadResults.tsx      # Upload success/error display
-├── donations/        # **NEW**: Monetary donation system
+├── donations/        # Monetary donation system
 │   └── MonetaryDonationForm.tsx # Form for logging USD/MTGO tix donations
 ├── dashboard/        # Progress tracking and visualization
-│   ├── Dashboard.tsx          # Main progress dashboard with monetary donation integration
+│   ├── Dashboard.tsx          # Main progress dashboard with collapsible sections
 │   ├── ProgressBar.tsx        # Completion percentage visual (1 decimal place)
 │   ├── ProgressSummary.tsx    # Summary component with value-based contributor rankings
-│   └── RecentContributions.tsx # Shows both card and monetary contributions with visual distinction
+│   ├── RecentContributions.tsx # Shows both card and monetary contributions
+│   └── RequirementDecksOverview.tsx # **NEW**: Collapsible requirement decks display
 ├── cards/           # Card display tables and management
-│   ├── OutstandingCardsTable.tsx # Cards still needed (RED)
-│   └── GatheredCardsTable.tsx    # Contributed cards (all statuses)
+│   ├── OutstandingCardsTable.tsx # **ENHANCED**: Collapsible, paginated, searchable cards needed
+│   └── GatheredCardsTable.tsx    # **ENHANCED**: Collapsible, paginated, searchable gathered cards
 ├── debug/           # Advanced debugging and fixing tools (removed from production)
 │   ├── MetadataFixer.tsx         # Fixes cards missing metadata entirely
 │   ├── PriceFixer.tsx            # Robust price discovery across all printings
 │   ├── PricingDebug.tsx          # Basic pricing debug information
 │   └── ComprehensivePricingDebug.tsx # Complete card status overview
 └── common/          # Shared UI components
-    └── UploadModeToggle.tsx      # **UPDATED**: Three-way toggle (Cards → Donations → Requirements)
+    └── UploadModeToggle.tsx      # Three-way toggle (Cards → Donations → Requirements)
 ```
 
 ## Business Logic
@@ -156,10 +157,23 @@ contributor_value = card_contribution_value + monetary_donation_amount
 **Session 5 (COMPLETE):** ✅ MTGO Card Pricing System Integration with full price display
 **Session 6 (COMPLETE):** ✅ Production deployment preparation with UI cleanup and polish
 **Session 7 (COMPLETE):** ✅ **Monetary Donation System** - Full integration of USD/MTGO tix donation tracking
+**Session 8 (COMPLETE):** ✅ **Dashboard UX Overhaul** - Responsive redesign with collapsible sections and improved mobile experience
 
-**Current Status:** Full MVP complete with **monetary donation system** and production-ready deployment. All features working including real-time MTGO pricing, card contributions tracking, **monetary donation logging**, dual format file support (.dek/.txt), test mode for safe development, and clean production interface.
+**Current Status:** Full MVP complete with enhanced dashboard UX and production-ready deployment. All features working including real-time MTGO pricing, card contributions tracking, monetary donation logging, dual format file support (.dek/.txt), test mode for safe development, collapsible dashboard sections, and clean production interface.
 
 ## Recent Enhancements
+
+### **Dashboard UX Overhaul (Session 8) - COMPLETE ✅**
+- **Collapsible Sections:** All three main dashboard sections (Outstanding Cards, Gathered Cards, Requirement Decks) now collapsible with default collapsed state
+- **Requirement Decks Display:** New component showing all target decks with progress bars, completion percentages, and expandable card lists
+- **Enhanced Card Tables:**
+  - **Pagination:** 20 cards per page with smooth navigation controls
+  - **Search Functionality:** Real-time search within each table
+  - **Compact Layout:** Combined information display (e.g., "3/4" progress) to eliminate horizontal scrolling
+  - **Mobile Responsive:** Optimized column headers and stacked information for mobile devices
+- **Progressive Disclosure:** Clean initial view with just progress overview, users expand sections as needed
+- **No Horizontal Scrolling:** Completely eliminated on both desktop and mobile
+- **Visual Progress Indicators:** Inline progress bars and status badges for quick scanning
 
 ### **Monetary Donation System Integration (Session 7) - COMPLETE ✅**
 - **Database Schema:** Added `monetary_donations` table with contributor tracking, amount, donation type (USD/tix), and optional notes
@@ -252,6 +266,7 @@ contributor_value = card_contribution_value + monetary_donation_amount
 - ✅ Clean deployment-ready build optimized for GitHub Pages (Session 6)
 - ✅ Recent Contributions panel performance optimization with historical data support
 - ✅ **Monetary Donation System with full integration and real-time updates (Session 7)**
+- ✅ **Dashboard UX overhaul with collapsible sections and mobile optimization (Session 8)**
 
 ### Dual Format File Support (.dek/.txt) - COMPLETE ✅
 - **Universal Deck Parser:** New `deckParser.ts` with automatic format detection based on file extension
@@ -293,5 +308,5 @@ contributor_value = card_contribution_value + monetary_donation_amount
 - Client-side file processing only
 - No user authentication (public contribution model)
 - MTGO deck file dependency (.dek XML or .txt plain text formats)
-- 7-session development timeline for complete MVP with monetary donation system and production deployment (COMPLETE)
+- 8-session development timeline for complete MVP with monetary donation system, dashboard UX overhaul, and production deployment (COMPLETE)
 - Test mode available for safe development without database pollution

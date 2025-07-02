@@ -6,6 +6,7 @@ import PriceUpdateService from '../../services/priceUpdateService';
 import { ProgressBar } from './ProgressBar';
 import { OutstandingCardsTable } from '../cards/OutstandingCardsTable';
 import { GatheredCardsTable } from '../cards/GatheredCardsTable';
+import { RequirementDecksOverview } from './RequirementDecksOverview';
 import type { ProcessedCard } from '../../types/cards';
 
 export const Dashboard: React.FC = () => {
@@ -309,18 +310,19 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Cards Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
         <OutstandingCardsTable
           cards={outstandingCards}
           loading={loading}
-          className="lg:col-span-1"
         />
         <GatheredCardsTable
           cards={gatheredCards}
           loading={loading}
-          className="lg:col-span-1"
         />
       </div>
+
+      {/* Requirement Decks Overview */}
+      <RequirementDecksOverview />
 
 
       {/* No Data State */}
