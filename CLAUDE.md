@@ -71,11 +71,8 @@ src/components/
 ├── cards/           # Card display tables and management
 │   ├── OutstandingCardsTable.tsx # **ENHANCED**: Collapsible, paginated, searchable cards needed
 │   └── GatheredCardsTable.tsx    # **ENHANCED**: Collapsible, paginated, searchable gathered cards
-├── debug/           # Advanced debugging and fixing tools (removed from production)
-│   ├── MetadataFixer.tsx         # Fixes cards missing metadata entirely
-│   ├── PriceFixer.tsx            # Robust price discovery across all printings
-│   ├── PricingDebug.tsx          # Basic pricing debug information
-│   └── ComprehensivePricingDebug.tsx # Complete card status overview
+├── debug/           # Collection analysis and database correction tools
+│   └── DatabaseCorrection.tsx    # Collection vs database discrepancy correction tool
 └── common/          # Shared UI components
     └── UploadModeToggle.tsx      # Three-way toggle (Cards → Donations → Requirements)
 ```
@@ -159,9 +156,19 @@ contributor_value = card_contribution_value + monetary_donation_amount
 **Session 7 (COMPLETE):** ✅ **Monetary Donation System** - Full integration of USD/MTGO tix donation tracking
 **Session 8 (COMPLETE):** ✅ **Dashboard UX Overhaul** - Responsive redesign with collapsible sections and improved mobile experience
 
-**Current Status:** Full MVP complete with enhanced dashboard UX and production-ready deployment. All features working including real-time MTGO pricing, card contributions tracking, monetary donation logging, dual format file support (.dek/.txt), test mode for safe development, collapsible dashboard sections, and clean production interface.
+**Current Status:** Full MVP complete with enhanced dashboard UX and production-ready deployment. All features working including real-time MTGO pricing, card contributions tracking, monetary donation logging, dual format file support (.dek/.txt), test mode for safe development, collapsible dashboard sections, database correction tool, and clean production interface.
 
 ## Recent Enhancements
+
+### **Database Correction Tool - COMPLETE ✅**
+- **Collection vs Database Analysis:** Upload MTGO collection file to identify discrepancies between actual collection and database records
+- **Smart Correction Logic:** Automatically identifies cards where database quantity exceeds collection quantity
+- **Selective Contributor Targeting:** Preserves specific contributors (e.g., BK) while reducing quantities from other contributors
+- **Surgical Database Updates:** Reduces quantities when possible, deletes records only when quantity reaches zero
+- **Preview System:** Shows all planned database changes before execution for review and confirmation
+- **Safety Features:** Clear warnings, confirmation prompts, and detailed action summaries
+- **Real-time Verification:** Re-analyzes collection after corrections to confirm changes were applied correctly
+- **Debug View Integration:** Accessible through Debug tab for collection maintenance and data integrity management
 
 ### **Dashboard UX Overhaul (Session 8) - COMPLETE ✅**
 - **Collapsible Sections:** All three main dashboard sections (Outstanding Cards, Gathered Cards, Requirement Decks) now collapsible with default collapsed state
@@ -200,8 +207,7 @@ contributor_value = card_contribution_value + monetary_donation_amount
 - **Accurate Progress Tracking:** Progress bars and statistics now reflect real requirements vs gathered cards
 - **Contributor Dollar Amounts:** Enhanced display to show both card counts and MTGO pricing values per contributor
 - **Collection Value Dashboard:** Added Collection Value and Outstanding Value metrics with real pricing data
-- **Debug Tools Removal:** Removed all development/debug components from production UI (MetadataFixer, PriceFixer, etc.)
-- **Clean Production Interface:** Removed "Refresh Prices" and "Clear All Data" buttons for public deployment
+- **Clean Production Interface:** Production-ready interface with appropriate debug tools for collection management
 - **UI Polish:** Professional appearance suitable for public GitHub Pages deployment
 - **Bundle Optimization:** Final production build at 130.56 kB with optimized performance
 
@@ -261,12 +267,13 @@ contributor_value = card_contribution_value + monetary_donation_amount
 - ✅ Robust cross-printing MTGO price discovery for cards from any set
 - ✅ Missing metadata detection and automatic population
 - ✅ Advanced debugging tools for pricing and metadata issues
-- ✅ Production-ready interface without development tools (Session 6)
+- ✅ Production-ready interface with appropriate collection management tools (Session 6)
 - ✅ Accurate contributions panel with real progress tracking (Session 6)
 - ✅ Clean deployment-ready build optimized for GitHub Pages (Session 6)
 - ✅ Recent Contributions panel performance optimization with historical data support
 - ✅ **Monetary Donation System with full integration and real-time updates (Session 7)**
 - ✅ **Dashboard UX overhaul with collapsible sections and mobile optimization (Session 8)**
+- ✅ **Database Correction Tool for collection vs database discrepancy resolution**
 
 ### Dual Format File Support (.dek/.txt) - COMPLETE ✅
 - **Universal Deck Parser:** New `deckParser.ts` with automatic format detection based on file extension

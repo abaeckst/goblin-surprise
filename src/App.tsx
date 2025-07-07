@@ -9,6 +9,8 @@ import { MonetaryDonationForm } from './components/donations/MonetaryDonationFor
 import { UploadModeToggle, type UploadMode } from './components/common/UploadModeToggle';
 import { DatabaseService } from './services/supabase';
 import PriceUpdateService from './services/priceUpdateService';
+import { DatabaseCorrection } from './components/debug/DatabaseCorrection';
+import { DonationsHistory } from './components/history/DonationsHistory';
 import type { UploadResult } from './types/uploads';
 import './App.css';
 
@@ -17,7 +19,7 @@ function App() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('contribution');
-  const [currentView, setCurrentView] = useState<'upload' | 'dashboard'>('upload');
+  const [currentView, setCurrentView] = useState<'upload' | 'dashboard' | 'history' | 'debug'>('upload');
   const [testMode, setTestMode] = useState(false);
 
   // Test database connection and initialize price updates on load
@@ -171,6 +173,26 @@ function App() {
                 >
                   Dashboard
                 </button>
+                <button
+                  onClick={() => setCurrentView('history')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    currentView === 'history'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                  }`}
+                >
+                  History
+                </button>
+                <button
+                  onClick={() => setCurrentView('debug')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    currentView === 'debug'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                  }`}
+                >
+                  Debug
+                </button>
               </nav>
             </div>
           </div>
@@ -220,9 +242,15 @@ function App() {
               </div>
             )}
           </>
-        ) : (
+        ) : currentView === 'dashboard' ? (
           /* Dashboard View */
           <Dashboard />
+        ) : currentView === 'history' ? (
+          /* History View */
+          <DonationsHistory />
+        ) : (
+          /* Debug View */
+          <DatabaseCorrection />
         )}
 
         {/* Upload Results */}
